@@ -1,0 +1,2 @@
+json_key_file("fastlane/secret.json")
+package_name("<%= props.appId %>")
