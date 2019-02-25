@@ -1,8 +1,8 @@
 module.exports = {
   name: 'init',
   alias: 'i',
-  run: async function (toolbox) {
-    const { print, template, http, system, android } = toolbox
+  run: async function(toolbox) {
+    const { print, template, http, system, android, filesystem } = toolbox
 
     const fastlanePath = system.which('fastlane')
     if (!fastlanePath) {
@@ -16,13 +16,23 @@ module.exports = {
     await template.generate({
       template: 'Gemfile',
       target: 'android/Gemfile',
-      props: { }
+      props: {}
     })
 
     await template.generate({
       template: 'Fastfile',
       target: 'android/fastlane/Fastfile',
-      props: { }
+      props: {}
+    })
+
+    const xcodeProjectName = filesystem.find('ios/*.xcodeproj', {
+      directories: true
+    })[0]
+
+    await template.generate({
+      template: 'Fastfile',
+      target: 'ios/fastlane/Fastfile',
+      props: { xcodeProjectName }
     })
 
     await template.generate({
@@ -34,24 +44,37 @@ module.exports = {
     await template.generate({
       template: 'config.yml',
       target: '.circleci/config.yml',
-      props: { }
+      props: {}
     })
 
     // text input
-    const askOrganization = { type: 'input', name: 'org', message: 'Your github organization?' }
-    const askProject = { type: 'input', name: 'project', message: 'Your github project name?' }
-    const askApiToken = { type: 'input', name: 'apitoken', message: 'Your CircleCI API token?' }
+    const askOrganization = {
+      type: 'input',
+      name: 'org',
+      message: 'Your github organization?'
+    }
+    const askProject = {
+      type: 'input',
+      name: 'project',
+      message: 'Your github project name?'
+    }
+    const askApiToken = {
+      type: 'input',
+      name: 'apitoken',
+      message: 'Your CircleCI API token?'
+    }
 
     // ask a series of questions
     const questions = [askOrganization, askProject, askApiToken]
     const { org, project, apitoken } = await toolbox.prompt.ask(questions)
 
-
     const api = http.create({
       baseURL: 'https://circleci.com/api/v1.1/'
     })
 
-    const response = await api.post(`project/github/${org}/${project}/follow?circle-token=${apitoken}`)
+    const response = await api.post(
+      `project/github/${org}/${project}/follow?circle-token=${apitoken}`
+    )
 
     print.info(response)
     print.info(`${print.checkmark} Citius`)

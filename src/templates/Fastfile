@@ -41,3 +41,15 @@ platform :android do
     upload_to_play_store
   end
 end
+
+# platform :ios do
+#
+#   before_all do
+#     setup_circle_ci
+#     IOS_VERSION_NUMBER=get_version_number(xcodeproj: "<%= props.xcodeProjectName %>")
+#   end
+#
+#
+#
+#
+# end

@@ -1,24 +1,78 @@
-version: 2
+version: 2.1
+
+commands:
+  build_ios:
+    description: Build iOS
+    steps:
+      - checkout:
+          path: ~/project
+
+      - restore_cache:
+          key: ios-node-{{ checksum "../package.json" }}
+      - run: npm install
+      - save_cache:
+          key: ios-node-{{ checksum "../package.json" }}
+          paths:
+            - ../node_modules
+
+      - run:
+          name: Set Ruby Version
+          command:  echo "ruby-2.4" > ~/.ruby-version
+
+      - restore_cache:
+          key: 1-gems-ios-{{ checksum "Gemfile.lock" }}
+      - run: bundle install --path vendor/bundle && bundle clean
+      - save_cache:
+          key: 1-gems-ios-{{ checksum "Gemfile.lock" }}
+          paths:
+            - vendor/bundle
+
+
+      - restore_cache:
+          key: 1-pods-{{ checksum "Podfile.lock" }}
+      - run:
+          name: Fetch and install CocoaPods, if lockfiles dont match
+          command: |
+            [[ -f Pods/Manifest.lock && $(diff Pods/Manifest.lock Podfile.lock | wc -l) -gt 0 || ! -f Pods/Manifest.lock ]] &&
+            curl https://cocoapods-specs.circleci.com/fetch-cocoapods-repo-from-s3.sh | bash -s cf &&
+            bundle exec pod install || echo 'Pods restored from cache and up to date'
+      - save_cache:
+          key: 1-pods-{{ checksum "Podfile.lock" }}
+          paths:
+            - ./Pods
+
+      - run: bundle exec fastlane build
+      - store_artifacts:
+          path: ~/project/output
+
 jobs:
-  build:
+  _ios_config: &ios_config
+    working_directory: ~/project/ios
+    environment:
+      FL_OUTPUT_DIR: ~/project/output
+    macos:
+      xcode: "10.2.0"
+    shell: /bin/bash --login -o pipefail
+
+  prebuild:
     working_directory: ~/project
     docker:
-    - image: circleci/node:8
+      - image: circleci/node:8
     steps:
-    - checkout
-    - restore_cache:
-        key: react-native-ci-{{ checksum "package-lock.json" }}
-    - run: npm install
-    - save_cache:
-        key: react-native-ci-{{ checksum "package-lock.json" }}
-        paths:
-        - node_modules
-    - persist_to_workspace:
-        root: ~/project
-        paths:
-        - node_modules
-    - store_test_results:
-        path: ~/project/junit.xml
+      - checkout
+      - restore_cache:
+          key: react-native-ci-{{ checksum "package-lock.json" }}
+      - run: npm install
+      - save_cache:
+          key: react-native-ci-{{ checksum "package-lock.json" }}
+          paths:
+          - node_modules
+      - persist_to_workspace:
+          root: ~/project
+          paths:
+          - node_modules
+      - store_test_results:
+          path: ~/project/junit.xml
 
   android:
     working_directory: ~/project/android
@@ -47,54 +101,61 @@ jobs:
         key: jars-{{ checksum "build.gradle" }}-{{ checksum  "app/build.gradle" }}
 
   ios:
-    macos:
-      xcode: "9.4.1"
-    working_directory: ~/project/ios
+    <<: *ios_config
     environment:
-      FL_OUTPUT_DIR: ~/project/output
-    shell: /bin/bash --login -o pipefail
+      IOS_ENVIRONMENT: dev
     steps:
-    - checkout:
-        path: ~/project
+      - build_ios
 
-    - restore_cache:
-        key: react-native-ci-{{ checksum "../package-lock.json" }}
-    - run: npm install
-    - save_cache:
-        key: react-native-ci-{{ checksum "../package-lock.json" }}
-        paths:
-        - ../node_modules
+  build_deploy_ios_dev:
+    <<: *ios_config
+    environment:
+      IOS_ENVIRONMENT: dev
+    steps:
+      - build_ios
 
-    - run:
-        name: Set Ruby Version
-        command:  echo "ruby-2.4" > ~/.ruby-version
-    - restore_cache:
-        key: 1-gems-ios-{{ checksum "Gemfile.lock" }}
-    - run:
-        name: Fetch CocoaPods Specs
-        command: |
-          curl https://cocoapods-specs.circleci.com/fetch-cocoapods-repo-from-s3.sh | bash -s cf
-    - run: bundle install --path vendor/bundle
-    - run: bundle exec pod install
-    - run: bundle update fastlane
-    - save_cache:
-        key: 1-gems-ios-{{ checksum "Gemfile.lock" }}
-        paths:
-        - vendor/bundle
-
-    - run: bundle exec fastlane build
-    - store_artifacts:
-        path: ~/project/output
 
 workflows:
   version: 2
   node-android-ios:
     jobs:
-    - build
+    - prebuild
     - android:
         requires:
-        - build
+        - prebuild
     - ios:
         requires:
-        - build
+        - prebuild
+        filters:
+          branches:
+            ignore:
+              - dev
+              - staging
+# TODO
+#    - build_deploy_android_dev:
+#        requries:
+#          - build
+#          - android
+#        filters:
+#          branches:
+#            only: dev
+#    - build_deploy_android_staging:
+#        requries:
+#          - build
+#          - android
+#        filters:
+#          branches:
+#            only: staging
 
+    - build_deploy_ios_dev:
+        requires:
+          - prebuild
+        filters:
+          branches:
+            only: dev
+    - build_deploy_ios_staging:
+        requires:
+          - prebuild
+        filters:
+          branches:
+            only: staging
