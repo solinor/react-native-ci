@@ -6,10 +6,10 @@ module.exports = {
 
     const fastlanePath = system.which('fastlane')
     if (!fastlanePath) {
-      system.run('sudo gem install fastlane -NV')
+      await system.run('sudo gem install fastlane -NV')
     }
-//    const { execSync } = require('child_process')
-//    execSync('fastlane init', { cwd: 'android/', input: 'echo \'com.circletest\nfastlane/secret.json\nn\n\'' })
+    //    const { execSync } = require('child_process')
+    //    execSync('fastlane init', { cwd: 'android/', input: 'echo \'com.circletest\nfastlane/secret.json\nn\n\'' })
 
     const appId = android.getApplicationId()
 
