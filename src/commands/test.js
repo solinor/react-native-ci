@@ -12,12 +12,16 @@ module.exports = {
       npm
     } = toolbox
 
-    await android.createKeystore({
-      name: 'circletest',
-      storePassword: '123456',
-      alias: 'circleci',
-      aliasPassword: '123456'
-    })
+    // TODO figure out how to reference script path from here
+    ios_script_path = '/Users/lewtds/dev/solinor/react-native-ci/src/ios.rb'
+    system.run(`ruby ${ios_script_path}`)
+
+    // await android.createKeystore({
+    //   name: 'circletest',
+    //   storePassword: '123456',
+    //   alias: 'circleci',
+    //   aliasPassword: '123456'
+    // })
     //    const { execSync } = require('child_process')
     //    execSync('fastlane init', { cwd: 'android/', input: 'echo \'com.circletest\nfastlane/secret.json\nn\n\'' })
     // const appId = android.getApplicationId()
