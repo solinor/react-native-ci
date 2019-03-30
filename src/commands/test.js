@@ -9,11 +9,11 @@ module.exports = {
       patching,
       system,
       template,
-      npm
+      npm,
+      meta
     } = toolbox
 
-    // TODO figure out how to reference script path from here
-    ios_script_path = '/Users/lewtds/dev/solinor/react-native-ci/src/ios.rb'
+    ios_script_path = meta.src + '/ios.rb'
     info(await system.run(`ruby ${ios_script_path}`))
 
     // await android.createKeystore({

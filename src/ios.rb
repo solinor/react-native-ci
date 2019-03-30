@@ -72,8 +72,7 @@ def add_bundle_id_suffixes(project)
   end
 end
 
-# TODO: Extract out into init section/function
-project_path = '/Users/lewtds/dev/solinor/react-native-ci/circletest/ios/CircleTest.xcodeproj'
+project_path = 'ios/CircleTest.xcodeproj'
 project = Xcodeproj::Project.open(project_path)
 
 make_new_build_configurations(project)
