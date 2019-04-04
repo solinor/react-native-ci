@@ -72,11 +72,41 @@ def add_bundle_id_suffixes(project)
   end
 end
 
+def add_schemes(project_path)
+  # TODO present a drop down list where the user can choose the base scheme. Also check that the scheme is shared.
+  basename = File.basename(project_path, ".xcodeproj")
+  main_scheme_name = Xcodeproj::Project.schemes(project_path).select {|name| name == basename}.first
+  full_scheme_path = "#{project_path}/xcshareddata/xcschemes/#{main_scheme_name}.xcscheme"
+  main_scheme = Xcodeproj::XCScheme.new(full_scheme_path)
+
+  main_scheme.launch_action.build_configuration = "Dev Debug"
+  main_scheme.test_action.build_configuration = "Dev Debug"
+  main_scheme.analyze_action.build_configuration = "Dev Debug"
+  main_scheme.archive_action.build_configuration = "Dev Release"
+  main_scheme.profile_action.build_configuration = "Dev Release"
+
+  main_scheme.save_as(project_path, "CircleTestDev", shared=true)
+
+  main_scheme.launch_action.build_configuration = "Staging Debug"
+  main_scheme.test_action.build_configuration = "Staging Debug"
+  main_scheme.analyze_action.build_configuration = "Staging Debug"
+  main_scheme.archive_action.build_configuration = "Staging Release"
+  main_scheme.profile_action.build_configuration = "Staging Release"
+
+  main_scheme.save_as(project_path, "CircleTestStaging", shared=true)
+end
+
 # TODO: Extract out into init section/function
 project_path = '/Users/lewtds/dev/solinor/react-native-ci/circletest/ios/CircleTest.xcodeproj'
 project = Xcodeproj::Project.open(project_path)
+#
+# make_new_build_configurations(project)
+# add_bundle_id_suffixes(project)
+#
+# project.save
 
 make_new_build_configurations(project)
 add_bundle_id_suffixes(project)
+add_schemes(project_path)
 
 project.save
