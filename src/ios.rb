@@ -85,7 +85,7 @@ def add_schemes(project_path)
   main_scheme.archive_action.build_configuration = "Dev Release"
   main_scheme.profile_action.build_configuration = "Dev Release"
 
-  main_scheme.save_as(project_path, "CircleTestDev", shared=true)
+  main_scheme.save_as(project_path, basename + "Dev", shared=true)
 
   main_scheme.launch_action.build_configuration = "Staging Debug"
   main_scheme.test_action.build_configuration = "Staging Debug"
@@ -93,7 +93,7 @@ def add_schemes(project_path)
   main_scheme.archive_action.build_configuration = "Staging Release"
   main_scheme.profile_action.build_configuration = "Staging Release"
 
-  main_scheme.save_as(project_path, "CircleTestStaging", shared=true)
+  main_scheme.save_as(project_path, basename + "Staging", shared=true)
 end
 
 # TODO: Extract out into init section/function
