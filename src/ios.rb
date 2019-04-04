@@ -96,17 +96,17 @@ def add_schemes(project_path)
   main_scheme.save_as(project_path, basename + "Staging", shared=true)
 end
 
-# TODO: Extract out into init section/function
-project_path = '/Users/lewtds/dev/solinor/react-native-ci/circletest/ios/CircleTest.xcodeproj'
-project = Xcodeproj::Project.open(project_path)
-#
-# make_new_build_configurations(project)
-# add_bundle_id_suffixes(project)
-#
-# project.save
 
-make_new_build_configurations(project)
-add_bundle_id_suffixes(project)
-add_schemes(project_path)
+COMMAND = ARGV[0]
+project_path = ARGV[1]
+project = Xcodeproj::Project.open(project_path)
+
+if COMMAND == "add_schemes"
+  add_schemes(project_path)
+elsif COMMAND == "make_new_build_configurations"
+  make_new_build_configurations(project)
+elsif COMMAND == "add_bundle_id_suffixes"
+  add_bundle_id_suffixes(project)
+end
 
 project.save
