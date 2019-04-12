@@ -69,21 +69,43 @@ module.exports = toolbox => {
       const {
         system,
         template,
-        print: { info}
+        print
       } = toolbox
 
-      const { name, storePassword, alias, aliasPassword} = options
+      const { name, storePassword, alias, aliasPassword } = options
       const storeFile = `${name}-key.keystore`
+
+      print.info('Checking if CircleCI keystore already exists. For this we will need your admin password.')
+      const checkKeyStore = `sudo keytool -v -list -keystore ${storeFile} -storepass ${storePassword} -alias ${alias}`
+      let checkResult
+      try {
+        checkResult = await system.run(checkKeyStore)
+
+        if (checkResult) {
+          print.warning('CircleCI keystore found, deleting...')
+          const deleteKeyStore = `sudo keytool -delete -keystore ${storeFile} -storepass ${storePassword} -alias ${alias}`
+          await system.run(deleteKeyStore)
+          print.success('Deleting done.')
+        }
+      } catch (e) {
+        print.info(`${print.checkmark} No existing certificate found.`)
+      }
+
+      print.info('Generate new cert.')
       const command = `sudo keytool -genkey -v -keystore ${storeFile} -storepass ${storePassword} -alias ${alias} -keypass ${aliasPassword} -dname 'cn=Unknown, ou=Unknown, o=Unknown, c=Unknown' -keyalg RSA -keysize 2048 -validity 10000`
-      info(command)
       await system.run(command)
 
-      await template.generate({
+      const keystore = await system.run(checkKeyStore)
+      const keystoreProperties = await template.generate({
         template: 'keystore.properties',
-        target: `android/app/${name}-keystore.properties`,
+        // target: `android/app/${name}-keystore.properties`,
         props: { ...options, storeFile, name: name.toUpperCase() }
       })
 
+      return {
+        keystore: Buffer.from(keystore).toString('base64'),
+        keystoreProperties: Buffer.from(keystoreProperties).toString('base64')
+      }
     }
   }
 }
