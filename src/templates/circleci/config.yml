@@ -40,6 +40,8 @@ jobs:
         key: 1-gems-android-{{ checksum "Gemfile.lock" }}
         paths:
         - vendor/bundle
+    - run: bundle exec base64 -d <<< ${KEYSTORE} > app/${CIRCLE_PROJECT_REPONAME}-key.keystore
+    - run: bundle exec base64 -d <<< ${KEYSTORE_PROPERTIES} > app/${CIRCLE_PROJECT_REPONAME}-keystore.properties
     - run: bundle exec fastlane build
     - save_cache:
         paths:
