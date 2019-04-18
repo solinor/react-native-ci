@@ -76,7 +76,7 @@ module.exports = toolbox => {
       const storeFile = `${name}-key.keystore`
 
       print.info('Checking if CircleCI keystore already exists. For this we will need your admin password.')
-      const checkKeyStore = `sudo keytool -v -list -keystore app/${storeFile} -storepass ${storePassword} -alias ${alias}`
+      const checkKeyStore = `sudo keytool -v -list -keystore android/app/${storeFile} -storepass ${storePassword} -alias ${alias}`
       let keystore
       try {
         print.info(`Existing certificate found, using it.`)
@@ -87,7 +87,7 @@ module.exports = toolbox => {
 
       if (!keystore) {
         print.info('Generate new cert.')
-        const command = `sudo keytool -genkey -v -keystore app/${storeFile} -storepass ${storePassword} -alias ${alias} -keypass ${aliasPassword} -dname 'cn=Unknown, ou=Unknown, o=Unknown, c=Unknown' -keyalg RSA -keysize 2048 -validity 10000`
+        const command = `sudo keytool -genkey -v -keystore android/app/${storeFile} -storepass ${storePassword} -alias ${alias} -keypass ${aliasPassword} -dname 'cn=Unknown, ou=Unknown, o=Unknown, c=Unknown' -keyalg RSA -keysize 2048 -validity 10000`
         await system.run(command)
 
         keystore = await system.run(checkKeyStore)

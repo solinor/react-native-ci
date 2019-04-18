@@ -112,7 +112,7 @@ keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
 `
 
-  await patching.patch('app/build.gradle', { insert: keyStoreProperties, before: 'android {' })
+  await patching.patch('android/app/build.gradle', { insert: keyStoreProperties, before: 'android {' })
 
   const propsPrefix = project.toUpperCase()
   const signingConfigs =
@@ -126,11 +126,11 @@ keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
     }\n
     `
 
-  await patching.patch('app/build.gradle', { insert: signingConfigs, before: 'buildTypes {' })
+  await patching.patch('android/app/build.gradle', { insert: signingConfigs, before: 'buildTypes {' })
 
   const releaseType = new RegExp('buildTypes {\\n(\\s*)release\\s{')
   const signingConfigStr = '\n\t\t\tsigningConfig signingConfigs.release'
-  await patching.patch('app/build.gradle', { insert: signingConfigStr, after: releaseType })
+  await patching.patch('android/app/build.gradle', { insert: signingConfigStr, after: releaseType })
 }
 
 const runInit = async toolbox => {
