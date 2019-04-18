@@ -76,29 +76,26 @@ module.exports = toolbox => {
       const storeFile = `${name}-key.keystore`
 
       print.info('Checking if CircleCI keystore already exists. For this we will need your admin password.')
-      const checkKeyStore = `sudo keytool -v -list -keystore ${storeFile} -storepass ${storePassword} -alias ${alias}`
-      let checkResult
+      const checkKeyStore = `sudo keytool -v -list -keystore app/${storeFile} -storepass ${storePassword} -alias ${alias}`
+      let keystore
       try {
-        checkResult = await system.run(checkKeyStore)
-
-        if (checkResult) {
-          print.warning('CircleCI keystore found, deleting...')
-          const deleteKeyStore = `sudo keytool -delete -keystore ${storeFile} -storepass ${storePassword} -alias ${alias}`
-          await system.run(deleteKeyStore)
-          print.success('Deleting done.')
-        }
+        print.info(`Existing certificate found, using it.`)
+        keystore = await system.run(checkKeyStore)
       } catch (e) {
         print.info(`${print.checkmark} No existing certificate found.`)
       }
 
-      print.info('Generate new cert.')
-      const command = `sudo keytool -genkey -v -keystore ${storeFile} -storepass ${storePassword} -alias ${alias} -keypass ${aliasPassword} -dname 'cn=Unknown, ou=Unknown, o=Unknown, c=Unknown' -keyalg RSA -keysize 2048 -validity 10000`
-      await system.run(command)
+      if (!keystore) {
+        print.info('Generate new cert.')
+        const command = `sudo keytool -genkey -v -keystore app/${storeFile} -storepass ${storePassword} -alias ${alias} -keypass ${aliasPassword} -dname 'cn=Unknown, ou=Unknown, o=Unknown, c=Unknown' -keyalg RSA -keysize 2048 -validity 10000`
+        await system.run(command)
 
-      const keystore = await system.run(checkKeyStore)
+        keystore = await system.run(checkKeyStore)
+      }
+
       const keystoreProperties = await template.generate({
         template: 'keystore.properties',
-        // target: `android/app/${name}-keystore.properties`,
+        target: `android/app/${name}-keystore.properties`,
         props: { ...options, storeFile, name: name.toUpperCase() }
       })
 

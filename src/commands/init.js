@@ -1,3 +1,28 @@
+const askQuestions = async ({ prompt }) => {
+  // text input
+  const askOrganization = {
+    type: 'list',
+    name: 'org',
+    message: 'Your github organization?',
+    choices: ['solinor', 'something']
+  }
+  const askProject = {
+    type: 'list',
+    name: 'project',
+    message: 'Your github project name?',
+    choices: ['circletest', 'something']
+  }
+  const askApiToken = {
+    type: 'input',
+    name: 'apiToken',
+    message: 'Your CircleCI API token?'
+  }
+
+  // ask a series of questions
+  const questions = [askOrganization, askProject, askApiToken]
+  return prompt.ask(questions)
+}
+
 const initFastlane = async ({ system, android, template, filesystem, print }) => {
   const fastlanePath = system.which('fastlane')
   if (!fastlanePath) {
@@ -38,35 +63,12 @@ const initFastlane = async ({ system, android, template, filesystem, print }) =>
   })
 }
 
-const initCircleCI = async ({ template, prompt, print, http, android }) => {
+const initCircleCI = async ({ template, prompt, print, http, android }, { org, project, apiToken }) => {
   await template.generate({
     template: 'circleci/config.yml',
     target: '.circleci/config.yml',
     props: {}
   })
-
-  // text input
-  const askOrganization = {
-    type: 'list',
-    name: 'org',
-    message: 'Your github organization?',
-    choices: ['solinor', 'something']
-  }
-  const askProject = {
-    type: 'list',
-    name: 'project',
-    message: 'Your github project name?',
-    choices: ['circletest', 'something']
-  }
-  const askApiToken = {
-    type: 'input',
-    name: 'apiToken',
-    message: 'Your CircleCI API token?'
-  }
-
-  // ask a series of questions
-  const questions = [askOrganization, askProject, askApiToken]
-  const { org, project, apiToken } = await prompt.ask(questions)
 
   const api = http.create({
     baseURL: 'https://circleci.com/api/v1.1/'
@@ -102,11 +104,43 @@ const initCircleCI = async ({ template, prompt, print, http, android }) => {
   }
 }
 
+const setupGradle = async ({ android, patching }, { project }) => {
+  const keyStoreProperties =
+`def keystorePropertiesFile = rootProject.file("app/${project}-keystore.properties")
+def keystoreProperties = new Properties()
+keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+
+`
+
+  await patching.patch('app/build.gradle', { insert: keyStoreProperties, before: 'android {' })
+
+  const propsPrefix = project.toUpperCase()
+  const signingConfigs =
+`signingConfigs {
+        release {
+            keyAlias keystoreProperties['${propsPrefix}_RELEASE_KEY_ALIAS']
+            keyPassword keystoreProperties['${propsPrefix}_RELEASE_KEY_PASSWORD']
+            storeFile file(keystoreProperties['${propsPrefix}_RELEASE_STORE_FILE'])
+            storePassword keystoreProperties['${propsPrefix}_RELEASE_STORE_PASSWORD']
+        }
+    }\n
+    `
+
+  await patching.patch('app/build.gradle', { insert: signingConfigs, before: 'buildTypes {' })
+
+  const releaseType = new RegExp('buildTypes {\\n(\\s*)release\\s{')
+  const signingConfigStr = '\n\t\t\tsigningConfig signingConfigs.release'
+  await patching.patch('app/build.gradle', { insert: signingConfigStr, after: releaseType })
+}
+
 const runInit = async toolbox => {
   const { print } = toolbox
 
+  const config = await askQuestions(toolbox)
+
   await initFastlane(toolbox)
-  await initCircleCI(toolbox)
+  await initCircleCI(toolbox, config)
+  await setupGradle(toolbox, config)
 
   print.success(`${print.checkmark} Initialization success`)
 }
