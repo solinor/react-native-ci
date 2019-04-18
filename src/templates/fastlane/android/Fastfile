@@ -31,8 +31,9 @@ platform :android do
     end
 
     if env == 'dev' or env == 'staging' then
+      build_num = ENV["CIRCLE_BUILD_NUM"] ? ENV["CIRCLE_BUILD_NUM"] : 'local'
       add_badge(
-        shield: "#{ANDROID_VERSION_NAME}-#{ENV["CIRCLE_BUILD_NUM"]}-orange",
+        shield: "#{ANDROID_VERSION_NAME}-#{build_num}-orange",
         glob: "/app/src/main/res/mipmap-*/*.{png,PNG}",
         no_badge: true
       )
