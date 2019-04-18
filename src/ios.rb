@@ -109,10 +109,12 @@ if COMMAND == "add_schemes"
   add_schemes(project_path)
 elsif COMMAND == "make_new_build_configurations"
   make_new_build_configurations(project)
+  project.save
 elsif COMMAND == "add_bundle_id_suffixes"
   add_bundle_id_suffixes(project)
+  project.save
 elsif COMMAND == "get_project_path"
   get_project_path
 end
 
-project.save
+

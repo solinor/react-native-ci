@@ -15,9 +15,11 @@ module.exports = {
     } = toolbox
 
     const iosSpinner = spin('Modifying iOS Project')
-    await ios.addBuildConfigurations()
-    await ios.addBundleIdSuffixes()
+    // FIXME there might be some race condition going on here.
+    // addBuildConfigurations has to be last or the build configs will not be saved
     await ios.addSchemes()
+    await ios.addBundleIdSuffixes()
+    await ios.addBuildConfigurations()
     iosSpinner.succeed('iOS Project modified')
 
     const rnConfigSpinner = spin('Installing and configuring react-native-config..')
