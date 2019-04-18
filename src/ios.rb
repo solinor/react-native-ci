@@ -96,9 +96,13 @@ def add_schemes(project_path)
   main_scheme.save_as(project_path, basename + "Staging", shared=true)
 end
 
+def get_project_path()
+  path = Dir["ios/*.xcodeproj"].select {|f| File.directory? f}.first
+  path
+end
 
 COMMAND = ARGV[0]
-project_path = ARGV[1]
+project_path = get_project_path()
 project = Xcodeproj::Project.open(project_path)
 
 if COMMAND == "add_schemes"
@@ -107,6 +111,8 @@ elsif COMMAND == "make_new_build_configurations"
   make_new_build_configurations(project)
 elsif COMMAND == "add_bundle_id_suffixes"
   add_bundle_id_suffixes(project)
+elsif COMMAND == "get_project_path"
+  get_project_path
 end
 
 project.save
