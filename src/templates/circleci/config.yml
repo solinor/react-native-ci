@@ -23,7 +23,7 @@ jobs:
   android:
     working_directory: ~/project/android
     docker:
-    - image: circleci/android:api-28-node8-alpha
+    - image: circleci/android:api-27-node8-alpha
     steps:
     - checkout:
         path: ~/project
@@ -53,7 +53,7 @@ jobs:
     environment:
       ANDROID_ENVIRONMENT: dev
     docker:
-      - image: circleci/android:api-28-node8-alpha
+      - image: circleci/android:api-27-node8-alpha
     steps:
       - checkout:
           path: ~/project
@@ -71,10 +71,10 @@ jobs:
           paths:
             - vendor/bundle
       - run: sudo apt-get update
-      - run: sudo apt-get install awscli imagemagick
-      - run: bundle exec base64 -d <<< ${KEYSTORE} > app/${CIRCLE_PROJECT_REPONAME}-key.keystore
-      - run: bundle exec base64 -d <<< ${KEYSTORE_PROPERTIES} > app/${CIRCLE_PROJECT_REPONAME}-keystore.properties
-      - run: bundle exec base64 -d <<< ${GOOGLE_PLAY_JSON} > fastlane/google-play-store.json
+      - run: sudo apt-get install imagemagick
+      - run: echo ${KEYSTORE} | base64 --decode > app/${CIRCLE_PROJECT_REPONAME}-key.keystore
+      - run: echo ${KEYSTORE_PROPERTIES} | base64 --decode > app/${CIRCLE_PROJECT_REPONAME}-keystore.properties
+      - run: echo ${GOOGLE_PLAY_JSON} | base64 --decode > fastlane/google-play-store.json
       - run: bundle exec fastlane build_deploy env:${ANDROID_ENVIRONMENT}
       - save_cache:
           paths:
@@ -131,23 +131,26 @@ workflows:
   node-android-ios:
     jobs:
     - test
+
     - android:
         requires:
         - test
+        filters:
+          branches:
+            ignore:
+              - master
+              - staging
+
     - ios:
         requires:
         - test
 
     - build_deploy_android_dev:
-        requires:
-          - test
         filters:
           branches:
             only: master
 
     - build_deploy_android_staging:
-        requires:
-          - test
         filters:
           branches:
             only: staging

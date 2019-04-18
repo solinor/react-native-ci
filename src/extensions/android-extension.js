@@ -87,12 +87,13 @@ module.exports = toolbox => {
         print.info(`${print.checkmark} No existing certificate found.`)
       }
 
+      let encodedKeystore
       if (!keystore) {
         print.info('Generate new cert.')
         const command = `sudo keytool -genkey -v -keystore android/app/${storeFile} -storepass ${storePassword} -alias ${alias} -keypass ${aliasPassword} -dname 'cn=Unknown, ou=Unknown, o=Unknown, c=Unknown' -keyalg RSA -keysize 2048 -validity 10000`
         await system.run(command)
-
-        keystore = await system.run(checkKeyStore)
+        const encodeCommand = `openssl base64 -A -in android/app/${storeFile}`
+        encodedKeystore = await system.run(encodeCommand)
       }
 
       const keystoreProperties = await template.generate({
@@ -102,13 +103,14 @@ module.exports = toolbox => {
       })
 
       return {
-        keystore: Buffer.from(keystore).toString('base64'),
+        keystore: encodedKeystore,
         keystoreProperties: Buffer.from(keystoreProperties).toString('base64')
       }
     },
     base64EncodeJson: jsonPath => {
-      const jsonStr = JSON.stringify(fs.readFileSync(jsonPath, 'utf8'))
-      return Buffer.from(jsonStr).toString('base64')
+      const { system } = toolbox
+      const encodeCommand = `openssl base64 -A -in ${jsonPath}`
+      return system.run(encodeCommand)
     }
   }
 }
