@@ -17,9 +17,14 @@ const askQuestions = async ({ prompt }) => {
     name: 'apiToken',
     message: 'Your CircleCI API token?'
   }
+  const askGooglePlayJSONPath = {
+    type: 'input',
+    name: 'jsonPath',
+    message: 'Path to Google Play Store JSON?'
+  }
 
   // ask a series of questions
-  const questions = [askOrganization, askProject, askApiToken]
+  const questions = [askOrganization, askProject, askApiToken, askGooglePlayJSONPath]
   return prompt.ask(questions)
 }
 
@@ -71,7 +76,7 @@ const initFastlane = async ({ system, android, template, filesystem, print }) =>
   })
 }
 
-const initCircleCI = async ({ template, prompt, print, http, android }, { org, project, apiToken }) => {
+const initCircleCI = async ({ template, prompt, print, http, android }, { org, project, apiToken, jsonPath }) => {
   await template.generate({
     template: 'circleci/config.yml',
     target: '.circleci/config.yml',
@@ -109,10 +114,26 @@ const initCircleCI = async ({ template, prompt, print, http, android }, { org, p
       { name: 'KEYSTORE_PROPERTIES', value: keystoreFiles.keystoreProperties },
       { headers: { 'Content-Type': 'application/json' } }
     )
+
+    print.info('Store Google Play JSON to secret variables')
+    const encodedPlayStoreJSON = android.base64EncodeJson(jsonPath)
+    await api.post(
+      `project/github/${org}/${project}/envvar?circle-token=${apiToken}`,
+      { name: 'GOOGLE_PLAY_JSON', value: encodedPlayStoreJSON },
+      { headers: { 'Content-Type': 'application/json' } }
+    )
+
   }
 }
 
 const setupGradle = async ({ android, patching }, { project }) => {
+  const GRADLE_FILE_PATH = 'android/app/build.gradle'
+  await patching.replace(
+    GRADLE_FILE_PATH,
+    'versionCode 1',
+    'versionCode rootProject.hasProperty("VERSION_CODE") ? VERSION_CODE.toInteger() : 1'
+  )
+
   const keyStoreProperties =
 `def keystorePropertiesFile = rootProject.file("app/${project}-keystore.properties")
 def keystoreProperties = new Properties()
@@ -120,7 +141,13 @@ keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
 `
 
-  await patching.patch('android/app/build.gradle', { insert: keyStoreProperties, before: 'android {' })
+  await patching.patch(
+    GRADLE_FILE_PATH,
+    {
+      insert: keyStoreProperties,
+      before: 'android {'
+    }
+  )
 
   const buildFlavors =
 `flavorDimensions "env"
@@ -142,7 +169,13 @@ keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
    
     `
 
-  await patching.patch('android/app/build.gradle', { insert: buildFlavors, before: 'buildTypes {' })
+  await patching.patch(
+    GRADLE_FILE_PATH,
+    {
+      insert: buildFlavors,
+      before: 'buildTypes {'
+    }
+  )
 
   const propsPrefix = project.toUpperCase()
   const signingConfigs =
@@ -156,11 +189,23 @@ keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
     }\n
     `
 
-  await patching.patch('android/app/build.gradle', { insert: signingConfigs, before: 'buildTypes {' })
+  await patching.patch(
+    GRADLE_FILE_PATH,
+    {
+      insert: signingConfigs,
+      before: 'buildTypes {'
+    }
+  )
 
   const releaseType = new RegExp('buildTypes {\\n(\\s*)release\\s{')
   const signingConfigStr = '\n\t\t\tsigningConfig signingConfigs.release'
-  await patching.patch('android/app/build.gradle', { insert: signingConfigStr, after: releaseType })
+  await patching.patch(
+    GRADLE_FILE_PATH,
+    {
+      insert: signingConfigStr,
+      after: releaseType
+    }
+  )
 }
 
 const runInit = async toolbox => {

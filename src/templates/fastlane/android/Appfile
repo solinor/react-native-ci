@@ -1,2 +1,2 @@
-json_key_file("fastlane/secret.json")
+json_key_file("fastlane/google-play-store.json")
 package_name("<%= props.appId %>")

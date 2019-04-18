@@ -1,3 +1,5 @@
+const fs = require('fs')
+
 // add your CLI-specific functionality here, which will then be accessible
 // to your commands
 module.exports = toolbox => {
@@ -12,7 +14,7 @@ module.exports = toolbox => {
       const gradle = filesystem.read('android/app/build.gradle')
       const lines = gradle.split('\n')
       lines.forEach((line) => {
-        const isAppId = line.includes('applicationId')
+        const isAppId = line.includes('applicationId "')
         if (isAppId) {
           const start = line.indexOf('"') + 1
           const end = line.lastIndexOf('"')
@@ -103,6 +105,10 @@ module.exports = toolbox => {
         keystore: Buffer.from(keystore).toString('base64'),
         keystoreProperties: Buffer.from(keystoreProperties).toString('base64')
       }
+    },
+    base64EncodeJson: jsonPath => {
+      const jsonStr = JSON.stringify(fs.readFileSync(jsonPath, 'utf8'))
+      return Buffer.from(jsonStr).toString('base64')
     }
   }
 }

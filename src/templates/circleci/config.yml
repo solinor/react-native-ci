@@ -74,6 +74,7 @@ jobs:
       - run: sudo apt-get install awscli imagemagick
       - run: bundle exec base64 -d <<< ${KEYSTORE} > app/${CIRCLE_PROJECT_REPONAME}-key.keystore
       - run: bundle exec base64 -d <<< ${KEYSTORE_PROPERTIES} > app/${CIRCLE_PROJECT_REPONAME}-keystore.properties
+      - run: bundle exec base64 -d <<< ${GOOGLE_PLAY_JSON} > fastlane/google-play-store.json
       - run: bundle exec fastlane build_deploy env:${ANDROID_ENVIRONMENT}
       - save_cache:
           paths:

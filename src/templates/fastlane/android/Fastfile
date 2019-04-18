@@ -39,9 +39,13 @@ platform :android do
       )
     end
 
+    build_number = number_of_commits()
     gradle(
       task: 'assemble',
-      build_type: build_type
+      build_type: build_type,
+      properties: {
+        "VERSION_CODE" => build_number
+      }
     )
   end
 
