@@ -2,48 +2,47 @@
 
 require 'xcodeproj'
 
-# def clone_build_config(project, from, name)
-#   # Heavily inspired by Xcodeproj::Project.add_build_configuration
-#   existing_build_config = project.build_configuration_list[name]
-#
-#   if existing_build_config
-#     existing_build_config
-#   else
-#     # FIXME: The new build configs seem to always have "Hello World" as the product name
-#     main_target = project.targets[0]
-#
-#     new_config = project.new(Xcodeproj::Project::XCBuildConfiguration)
-#     new_config.build_settings = Xcodeproj::Project::ProjectHelper.deep_dup(from.build_settings)
-#     new_config.build_settings['PRODUCT_NAME'] = main_target.name
-#     new_config.name = name
-#
-#     project.build_configuration_list.build_configurations << new_config
-#     new_config
-#   end
-# end
+def clone_build_config(project, dest, from, name)
+  # Heavily inspired by Xcodeproj::Project.add_build_configuration
+  existing_build_config = dest.build_configuration_list[name]
+
+  if existing_build_config
+    existing_build_config
+  else
+    new_config = project.new(Xcodeproj::Project::XCBuildConfiguration)
+    new_config.build_settings = Xcodeproj::Project::ProjectHelper.deep_dup(from.build_settings)
+    new_config.name = name
+
+    dest.build_configuration_list.build_configurations << new_config
+
+    new_config
+  end
+end
+
+def deep_clone_build_config(project, variant, build_type)
+
+  #
+  # Clone a build configuration both at the project level and at target level.
+  # Mimics what Xcode does when going to Project > Info > Configurations > + sign > Duplicate "X" Configuration
+  #
+
+  build_config_name = "#{variant} #{build_type}"
+  from = project.build_configuration_list[build_type]
+
+  clone_build_config(project, project, from, build_config_name)
+
+  project.targets.each do |target|
+    debug_target_build_config = target.build_configuration_list[build_type]
+    clone_build_config(project, target, debug_target_build_config, build_config_name)
+  end
+end
 
 
 def make_new_build_configurations(project)
-  # debug_config = project.build_configurations.select {|config| config.name == "Debug"}.first
-  # release_config = project.build_configurations.select {|config| config.name == "Release"}.first
-  #
-  # clone_build_config(project, debug_config, 'Staging Debug')
-  # clone_build_config(project, release_config, 'Staging Release')
-  #
-  # clone_build_config(project, debug_config, 'Dev Debug')
-  # clone_build_config(project, release_config, 'Dev Release')
-
-  main_target = project.targets[0]
-  product_name = main_target.build_configuration_list['Release'].build_settings['PRODUCT_NAME']
-
-  main_target.add_build_configuration('Staging Debug', :debug)
-  main_target.add_build_configuration('Staging Release', :release)
-  main_target.add_build_configuration('Dev Debug', :debug)
-  main_target.add_build_configuration('Dev Release', :release)
-
-  main_target.build_configurations.each do |config|
-    config.build_settings['PRODUCT_NAME'] ||= product_name
-  end
+  deep_clone_build_config(project, 'Dev', 'Debug')
+  deep_clone_build_config(project, 'Dev', 'Release')
+  deep_clone_build_config(project, 'Staging', 'Debug')
+  deep_clone_build_config(project, 'Staging', 'Release')
 end
 
 def add_bundle_id_suffixes(project)
