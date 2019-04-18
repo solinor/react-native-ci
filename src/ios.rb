@@ -97,8 +97,7 @@ def add_schemes(project_path)
 end
 
 def get_project_path()
-  path = Dir["ios/*.xcodeproj"].select {|f| File.directory? f}.first
-  path
+  Dir["ios/*.xcodeproj"].select {|f| File.directory? f}.first
 end
 
 COMMAND = ARGV[0]
