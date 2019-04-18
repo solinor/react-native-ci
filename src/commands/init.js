@@ -1,16 +1,16 @@
 const askQuestions = async ({ prompt }) => {
   // text input
   const askOrganization = {
-    type: 'list',
+    type: 'input',
+    initial: 'solinor',
     name: 'org',
-    message: 'Your github organization?',
-    choices: ['solinor', 'something']
+    message: 'Your github organization?'
   }
   const askProject = {
-    type: 'list',
+    type: 'input',
+    initial: 'circletest',
     name: 'project',
-    message: 'Your github project name?',
-    choices: ['circletest', 'something']
+    message: 'Your github project name?'
   }
   const askApiToken = {
     type: 'input',
