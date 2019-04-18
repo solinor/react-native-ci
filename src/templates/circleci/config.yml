@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  build:
+  test:
     working_directory: ~/project
     docker:
     - image: circleci/node:8
@@ -48,6 +48,43 @@ jobs:
         - ~/.gradle
         key: jars-{{ checksum "build.gradle" }}-{{ checksum  "app/build.gradle" }}
 
+  build_deploy_android_dev: &build_deploy_android_template  # to future maintainer: this is YAML's anchor feature
+    working_directory: ~/project/android
+    environment:
+      ANDROID_ENVIRONMENT: dev
+    docker:
+      - image: circleci/android:api-28-node8-alpha
+    steps:
+      - checkout:
+          path: ~/project
+      - attach_workspace:
+          at: ~/project
+      - restore_cache:
+          keys:
+            - jars-{{ checksum "build.gradle" }}-{{ checksum  "app/build.gradle" }}
+      - restore_cache:
+          keys:
+            - 1-gems-android-{{ checksum "Gemfile.lock" }}
+      - run: bundle install --path vendor/bundle
+      - save_cache:
+          key: 1-gems-android-{{ checksum "Gemfile.lock" }}
+          paths:
+            - vendor/bundle
+      - run: sudo apt-get update
+      - run: sudo apt-get install awscli imagemagick
+      - run: bundle exec base64 -d <<< ${KEYSTORE} > app/${CIRCLE_PROJECT_REPONAME}-key.keystore
+      - run: bundle exec base64 -d <<< ${KEYSTORE_PROPERTIES} > app/${CIRCLE_PROJECT_REPONAME}-keystore.properties
+      - run: bundle exec fastlane build_deploy env:${ANDROID_ENVIRONMENT}
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: jars-{{ checksum "build.gradle" }}-{{ checksum  "app/build.gradle" }}
+
+  build_deploy_android_staging:
+    <<: *build_deploy_android_template
+    environment:
+      ANDROID_ENVIRONMENT: staging
+
   ios:
     macos:
       xcode: "9.4.1"
@@ -92,11 +129,40 @@ workflows:
   version: 2
   node-android-ios:
     jobs:
-    - build
+    - test
     - android:
         requires:
-        - build
+        - test
     - ios:
         requires:
-        - build
+        - test
+
+    - build_deploy_android_dev:
+        requires:
+          - test
+        filters:
+          branches:
+            only: master
+
+    - build_deploy_android_staging:
+        requires:
+          - test
+        filters:
+          branches:
+            only: staging
+
+    - build_deploy_ios_dev:
+        requires:
+          - test
+        filters:
+          branches:
+            only: master
+
+    - build_deploy_ios_staging:
+        requires:
+          - test
+        filters:
+          branches:
+            only: staging
+
 

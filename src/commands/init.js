@@ -35,17 +35,18 @@ const initFastlane = async ({ system, android, template, filesystem, print }) =>
   const appId = android.getApplicationId()
 
   await template.generate({
-    template: 'fastlane/Gemfile',
+    template: 'fastlane/android/Gemfile',
     target: 'android/Gemfile',
     props: {}
   })
 
   await template.generate({
-    template: 'fastlane/Fastfile',
+    template: 'fastlane/android/Fastfile',
     target: 'android/fastlane/Fastfile',
-    props: {}
+    props: { appId }
   })
 
+  /*
   const xcodeProjectName = filesystem.find('ios/*.xcodeproj', {
     directories: true
   })[0]
@@ -55,11 +56,18 @@ const initFastlane = async ({ system, android, template, filesystem, print }) =>
     target: 'ios/fastlane/Fastfile',
     props: { xcodeProjectName }
   })
+  */
 
   await template.generate({
-    template: 'fastlane/Appfile',
+    template: 'fastlane/android/Appfile',
     target: 'android/fastlane/Appfile',
     props: { appId }
+  })
+
+  await template.generate({
+    template: 'fastlane/android/Pluginfile',
+    target: 'android/fastlane/Pluginfile',
+    props: { }
   })
 }
 
@@ -113,6 +121,28 @@ keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 `
 
   await patching.patch('android/app/build.gradle', { insert: keyStoreProperties, before: 'android {' })
+
+  const buildFlavors =
+`flavorDimensions "env"
+    productFlavors {
+        dev {
+            dimension "env"
+            applicationIdSuffix ".dev"
+            versionNameSuffix "-DEV"
+        }
+        staging {
+            dimension "env"
+            applicationIdSuffix ".staging"
+            versionNameSuffix "-STAGING"
+        }
+        prod {
+            dimension "env"
+        }
+    }
+   
+    `
+
+  await patching.patch('android/app/build.gradle', { insert: buildFlavors, before: 'buildTypes {' })
 
   const propsPrefix = project.toUpperCase()
   const signingConfigs =

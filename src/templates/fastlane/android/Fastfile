@@ -1,0 +1,78 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+#before_all do
+#  update_fastlane
+    ANDROID_VERSION_NAME = android_get_version_name()
+#end
+
+default_platform(:android)
+
+platform :android do
+  desc "Runs all the tests"
+  lane :test do
+    gradle(task: "test")
+  end
+
+  desc "Build debug|dev|staging|release version"
+  lane :build do |options|
+    if options[:build_type] then
+      build_type = options[:build_type]
+    else
+      puts "Choosing Debug as the default build type."
+      build_type = 'Debug'
+    end
+    gradle(
+      task: 'assemble',
+      build_type: build_type
+    )
+  end
+
+  desc "Submit a new Beta Build to Crashlytics Beta"
+  lane :beta do
+    gradle(task: "clean assembleRelease")
+    crashlytics
+    # sh "your_script.sh"
+    # You can also use other beta testing services here
+  end
+
+  desc "Build and push to Google Play"
+  lane :build_deploy do |options|
+    env = options[:env]
+    env_name = env.capitalize
+    build(build_type: env_name)
+    deploy(env: env)
+  end
+
+  desc "Push to Google Play"
+  lane :deploy do |options|
+    env = options[:env]
+    if env != 'dev' and env != 'staging' and env != 'release' then
+      raise 'env must be one of dev|staging|release'
+    end
+    env_name = env.capitalize
+    package_name_postfix = {
+      'release' => '',
+      'dev' => '.dev',
+      'staging' => '.staging'
+    }[env]
+    if env == 'dev' or env == 'staging' then
+      add_badge(
+        shield: "#{ANDROID_VERSION_NAME}-#{ENV["CIRCLE_BUILD_NUM"]}-orange",
+        glob: "/app/src/#{env}/res/mipmap-*/*.{png,PNG}",
+        no_badge: true
+      )
+    end
+    upload_to_play_store(
+      package_name:  "<%= props.appId %>#{package_name_postfix}",
+      track: 'internal',
+      apk: "./app/build/outputs/apk/#{env}/release/app-#{env}-release.apk"
+    )
+  end
+end
