@@ -22,12 +22,22 @@ platform :android do
 
   desc "Build debug|dev|staging|release version"
   lane :build do |options|
-    if options[:build_type] then
-      build_type = options[:build_type]
+    env = options[:env]
+    if env then
+      build_type = env.capitalize
     else
       puts "Choosing Debug as the default build type."
       build_type = 'Debug'
     end
+
+    if env == 'dev' or env == 'staging' then
+      add_badge(
+        shield: "#{ANDROID_VERSION_NAME}-#{ENV["CIRCLE_BUILD_NUM"]}-orange",
+        glob: "/app/src/main/res/mipmap-*/*.{png,PNG}",
+        no_badge: true
+      )
+    end
+
     gradle(
       task: 'assemble',
       build_type: build_type
@@ -45,8 +55,7 @@ platform :android do
   desc "Build and push to Google Play"
   lane :build_deploy do |options|
     env = options[:env]
-    env_name = env.capitalize
-    build(build_type: env_name)
+    build(env: env)
     deploy(env: env)
   end
 
@@ -62,13 +71,6 @@ platform :android do
       'dev' => '.dev',
       'staging' => '.staging'
     }[env]
-    if env == 'dev' or env == 'staging' then
-      add_badge(
-        shield: "#{ANDROID_VERSION_NAME}-#{ENV["CIRCLE_BUILD_NUM"]}-orange",
-        glob: "/app/src/#{env}/res/mipmap-*/*.{png,PNG}",
-        no_badge: true
-      )
-    end
     upload_to_play_store(
       package_name:  "<%= props.appId %>#{package_name_postfix}",
       track: 'internal',
