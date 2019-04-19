@@ -23,12 +23,12 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "gluegun": "2.1.2"
+    "gluegun": "^3.2.0"
   },
   "devDependencies": {
-    "standard": "^12.0.1",
+    "jest": "^23.6.0",
     "prettier": "^1.12.1",
-    "jest": "^23.6.0"
+    "standard": "^12.0.1"
   },
   "jest": {
     "testEnvironment": "node"

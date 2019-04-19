@@ -7,7 +7,7 @@ yarn.lock
 package.lock
 
 build/
-.idea
+.idea/
 .gradle
 local.properties
 *.iml
