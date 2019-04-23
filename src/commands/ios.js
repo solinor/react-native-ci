@@ -97,6 +97,8 @@ const initFastlane = async ({ ios, system, template, filesystem, prompt, print, 
     message: 'App Connect Team ID?'
   }
 
+  flSpinner.stop()
+
   // ask a series of questions
   const questions = [askDeveloperAccount, askITunesTeamId, askAppConnectTeamId]
   const answers = await prompt.ask(questions)
@@ -125,6 +127,9 @@ const initFastlane = async ({ ios, system, template, filesystem, prompt, print, 
 
   const matchQuestions = [askCertRepo, askAppId]
   const matchAnswers = await prompt.ask(matchQuestions)
+
+  flSpinner.start()
+
   const appId = matchAnswers.appId
 
   info(matchAnswers)
