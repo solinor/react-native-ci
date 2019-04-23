@@ -1,0 +1,8 @@
+app_identifier ENV["APP_IDENTIFIER"] # The bundle identifier of your app
+apple_id("<%= props.developerAccount %>") # Your Apple email address
+
+itc_team_id "<%= props.iTunesTeamId %>" # iTunes Connect Team ID
+team_id "<%= props.developerTeamId %>" # Developer Portal Team ID
+
+# For more information about the Appfile, see:
+#     https://docs.fastlane.tools/advanced/#appfile

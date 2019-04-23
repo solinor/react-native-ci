@@ -1,0 +1,89 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+fastlane_version "2.83.0"
+#update_fastlane
+
+default_platform(:ios)
+
+platform :ios do
+
+  before_all do
+    setup_circle_ci
+    IOS_VERSION_NUMBER=get_version_number(xcodeproj: "<%= props.projectName %>.xcodeproj", , target: "<%= props.projectName %>")
+  end
+
+  desc "Build Release debug version"
+  lane :build do
+    match(type: "development")
+    build_app(
+      scheme: "<%= props.projectName %>",
+      configuration: "Debug",
+      export_method: "development",
+      silent: true,
+    )
+  end
+
+  desc "Build and deploy to testflight"
+  lane :build_deploy do |options|
+    env = options[:env]
+    env_name = env.capitalize
+
+    if env != 'dev' and env != 'staging' and env != 'release' then
+      raise 'env must be one of dev|staging|release'
+    end
+
+    package_name_postfix = {
+      'release' => '',
+      'dev' => '.dev',
+      'staging' => '.staging'
+    }[env]
+
+    scheme_name_postfix = {
+      'release' => '',
+      'dev' => 'Dev',
+      'staging' => 'Staging'
+    }[env]
+
+    # Set app identifier
+    ENV["APP_IDENTIFIER"] = "<%= props.appId %>#{package_name_postfix}"
+
+    scheme = "<%= props.projectName %>#{scheme_name_postfix}"
+
+    match(type: "appstore")
+
+    build_number = number_of_commits()
+    increment_build_number(
+      build_number: build_number,
+      xcodeproj: "<%= props.projectName %>.xcodeproj"
+    )
+
+    # Create badge for env and staging
+    if env == 'dev' or env == 'staging' then
+      add_badge(
+        shield: "#{IOS_VERSION_NUMBER}-#{ENV["CIRCLE_BUILD_NUM"]}-orange",
+        no_badge: true
+      )
+    end
+
+    gym(
+      scheme: scheme,
+    )
+
+    upload_to_testflight(wait_processing_interval: 60)
+
+    slack(
+      username: "Fastlane",
+      icon_url: "",
+      channel: "#dev",  # Note that this is not the same as dev env
+      slack_url: "<%= props.slackHook %>",
+      message: "New <%= props.projectName %> #{env_name} release to TestFlight! #{IOS_VERSION_NUMBER} (#{ENV["CIRCLE_BUILD_NUM"]}) 🚀",
+    )
+  end
+end

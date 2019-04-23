@@ -1,10 +1,12 @@
 // add your CLI-specific functionality here, which will then be accessible
 // to your commands
+const install = require('install-packages')
+
 module.exports = toolbox => {
   toolbox.npm = {
-    isPackageInstalled: (packageName) => {
+    isPackageInstalled: function(packageName) {
       const {
-        filesystem,
+        filesystem
       } = toolbox
       let isInstalled = false
       const gradle = filesystem.read('package.json')
@@ -17,13 +19,46 @@ module.exports = toolbox => {
       })
       return isInstalled
     },
-    installPackage: async (packageName, saveDependency = true) => {
+    installPackage: function async (packageName, saveDependency = true, saveDevDependency = false) {
+      return install({
+          packages: [packageName],
+          saveDev: saveDevDependency,
+          packageManager: 'npm'
+        })
+    },
+    addPackageScript: (script) => {
       const {
-        system,
+        filesystem,
+        print
       } = toolbox
-      const rnConfig = await system.run(`sudo npm install ${saveDependency ? '--save' : ''} ${packageName}`)
-      return rnConfig
+      try {
+        const packaged = filesystem.read('package.json', 'json')
+        if (!packaged.scripts) packaged.scripts = {}
+        if (!script.force && packaged.scripts[script.key]) {
+          print.info('Script already exists')
+        }
+        packaged.scripts[script.key] = script.value
+        filesystem.write('package.json', packaged, { jsonIndent: 2 })
+      } catch (e) {
+        print.error(e)
+      }
+    },
+    addConfigSection: (section) => {
+      const {
+        filesystem,
+        print
+      } = toolbox
+      try {
+        const packaged = filesystem.read('package.json', 'json')
+        //if (!packaged.xcodeSchemes) packaged.xcodeSchemes = {}
+        packaged[section.key] = section.value
+        filesystem.write('package.json', packaged, { jsonIndent: 2 })
+      } catch (e) {
+        print.error(e)
+      }
+
     }
   }
+
 
 }
