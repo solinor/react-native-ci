@@ -23,7 +23,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "gluegun": "^3.2.0"
+    "gluegun": "^3.2.0",
     "install-packages": "^0.2.5"
   },
   "devDependencies": {

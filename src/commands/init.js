@@ -40,7 +40,7 @@ const initFastlane = async ({ system, android, template, filesystem, print }) =>
   const appId = android.getApplicationId()
 
   await template.generate({
-    template: 'fastlane/android/Gemfile',
+    template: 'fastlane/Gemfile',
     target: 'android/Gemfile',
     props: {}
   })
@@ -50,18 +50,6 @@ const initFastlane = async ({ system, android, template, filesystem, print }) =>
     target: 'android/fastlane/Fastfile',
     props: { appId }
   })
-
-  /*
-  const xcodeProjectName = filesystem.find('ios/*.xcodeproj', {
-    directories: true
-  })[0]
-
-  await template.generate({
-    template: 'fastlane/Fastfile',
-    target: 'ios/fastlane/Fastfile',
-    props: { xcodeProjectName }
-  })
-  */
 
   await template.generate({
     template: 'fastlane/android/Appfile',
@@ -222,6 +210,6 @@ const runInit = async toolbox => {
 
 module.exports = {
   name: 'init',
-  alias: 'i',
+  alias: 'e',
   run: runInit
 }

@@ -19,8 +19,12 @@ module.exports = toolbox => {
     addBundleIdSuffixes: async () => {
       const { print, system, meta } = toolbox
       return new Promise((resolve, reject) => {
-        system.run(`ruby ${meta.src}/ios.rb add_bundle_id_suffixes`)
-        resolve()
+        // FIXME: there is some race condition going on here.
+        // without setTimeout here, it won't be applied :shrug:
+        setTimeout(() => {
+          system.run(`ruby ${meta.src}/ios.rb add_bundle_id_suffixes`)
+          resolve()
+        }, 200)
       })
     },
     addSchemes: async () => {
@@ -28,6 +32,20 @@ module.exports = toolbox => {
       return new Promise((resolve, reject) => {
         system.run(`ruby ${meta.src}/ios.rb add_schemes`)
         resolve()
+      })
+    },
+    produceApp: async ({ appId, devId, appName}) => {
+      const { print, system } = toolbox
+      return new Promise((resolve, reject) => {
+        const output = system.run(`fastlane produce -u ${devId} -a ${appId} --app_name "${appName}"`)
+        resolve(output)
+      })
+    },
+    matchSync: async ({ certType, password }) => {
+      const { print, system } = toolbox
+      return new Promise((resolve, reject) => {
+        const output = system.run(`(export MATCH_PASSWORD=${password}; bundle exec fastlane match ${certType})`)
+        resolve(output)
       })
     }
   }
