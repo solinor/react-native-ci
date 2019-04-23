@@ -2,7 +2,7 @@
 
 require 'xcodeproj'
 
-def clone_build_config(project, dest, from, name)
+def clone_build_config(project, dest, from_build_config, name)
   # Heavily inspired by Xcodeproj::Project.add_build_configuration
   existing_build_config = dest.build_configuration_list[name]
 
@@ -10,11 +10,11 @@ def clone_build_config(project, dest, from, name)
     existing_build_config
   else
     new_config = project.new(Xcodeproj::Project::XCBuildConfiguration)
-    new_config.build_settings = Xcodeproj::Project::ProjectHelper.deep_dup(from.build_settings)
+    new_config.build_settings = Xcodeproj::Project::ProjectHelper.deep_dup(from_build_config.build_settings)
     new_config.name = name
 
-    dest.build_configuration_list.build_configurations << new_config
 
+    dest.build_configuration_list.build_configurations << new_config
     new_config
   end
 end
