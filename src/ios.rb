@@ -32,8 +32,15 @@ def deep_clone_build_config(project, variant, build_type)
   clone_build_config(project, project, from, build_config_name)
 
   project.targets.each do |target|
-    debug_target_build_config = target.build_configuration_list[build_type]
-    clone_build_config(project, target, debug_target_build_config, build_config_name)
+    original_target_build_config = target.build_configuration_list[build_type]
+    # TODO Get the development team from ios.js
+    original_target_build_config.build_settings['DEVELOPMENT_TEAM'] = "7J6HDCNPKE"
+
+    unless target.name.end_with?("Tests")
+      original_target_build_config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = "match Development $(PRODUCT_BUNDLE_IDENTIFIER)"
+    end
+
+    clone_build_config(project, target, original_target_build_config, build_config_name)
   end
 end
 
