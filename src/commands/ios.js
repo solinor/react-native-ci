@@ -120,7 +120,7 @@ const initFastlane = async ({ ios, system, template, filesystem, prompt, print, 
 
   const askAppId = {
     type: 'input',
-    initial: 'com.circletest',
+    initial: 'com.gofore.circletest',
     name: 'appId',
     message: 'What is your app bundle id?'
   }
