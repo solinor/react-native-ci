@@ -1,8 +1,10 @@
-const initXcode = async ({ print: { spin }, template, npm, system, ios }) => {
+const initXcode = async ({ print: { spin }, template, npm, system, ios }, config) => {
   const iosSpinner = spin('Modifying iOS Project')
   await ios.addSchemes()
-  await ios.addBuildConfigurations()
+  await ios.addBuildConfigurations(config.developerTeamId)
   await ios.addBundleIdSuffixes()
+  await system.run(`cd ios && fastlane run update_info_plist 'display_name:$(CUSTOM_PRODUCT_NAME)' plist_path:${config.projectName}/Info.plist`)
+
   iosSpinner.succeed('iOS Project modified')
 
   const rnConfigSpinner = spin('Installing and configuring react-native-config..')
@@ -54,7 +56,7 @@ const initXcode = async ({ print: { spin }, template, npm, system, ios }) => {
   spinner.succeed('react-native-schemes-manager installed..')
 }
 
-const initFastlane = async ({ ios, system, template, filesystem, prompt, print, print: { info, spin, success } }) => {
+const initFastlane = async ({ ios, system, template, filesystem, prompt, print, print: { info, spin, success } }, config) => {
   const flSpinner = spin('Preparing Fastlane for iOS..')
   info('Preparing Fastlane for iOS..')
   const fastlanePath = system.which('fastlane')
@@ -65,10 +67,72 @@ const initFastlane = async ({ ios, system, template, filesystem, prompt, print, 
 
   await template.generate({
     template: 'fastlane/Gemfile',
-    target: 'Gemfile',
+    target: 'ios/Gemfile',
     props: {}
   })
 
+  await template.generate({
+    template: 'fastlane/ios/Appfile',
+    target: 'ios/fastlane/Appfile',
+    props: {
+      ...config
+    }
+  })
+
+  flSpinner.start()
+
+  const { appId } = config
+
+  await template.generate({
+    template: 'fastlane/ios/Matchfile',
+    target: 'ios/fastlane/Matchfile',
+    props: {
+      ...config,
+      developerAccount: config.developerAccount,
+      appIds: `["${appId}", "${appId}.dev", "${appId}.staging"]`
+    }
+  })
+
+  await template.generate({
+    template: 'fastlane/ios/Pluginfile',
+    target: 'ios/fastlane/Pluginfile',
+    props: { }
+  })
+
+  await template.generate({
+    template: 'fastlane/ios/Fastfile',
+    target: 'ios/fastlane/Fastfile',
+    props: {
+      projectName: config.projectName,
+      appId: config.appId,
+      slackHook: config.slackHook
+    }
+  })
+
+  ios.produceApp({
+    appId,
+    devId: config.developerAccount,
+    appName: config.projectName
+  })
+  ios.produceApp({
+    appId: `${appId}.dev`,
+    devId: config.developerAccount,
+    appName: `${config.projectName} Dev`
+  })
+  ios.produceApp({
+    appId: `${appId}.staging`,
+    devId: config.developerAccount,
+    appName: `${config.projectName} Staging`
+  })
+  ios.matchSync({ certType: 'development', password: config.matchPassword })
+  ios.matchSync({ certType: 'appstore', password: config.matchPassword })
+
+  flSpinner.succeed('Fastlane ready for iOS')
+  success(`${print.checkmark} Fastlane iOS setup success`)
+}
+
+
+const getInput = async ({ system, filesystem, prompt }) => {
   const xcodeProjectName = filesystem.find('ios/', {
     matching: '*.xcodeproj',
     directories: true,
@@ -76,9 +140,6 @@ const initFastlane = async ({ ios, system, template, filesystem, prompt, print, 
     files: false,
   })[0]
   const projectName = xcodeProjectName.split(/\/|\./)[1]
-
-  // TODO Move this to initXcode
-  await system.run(`cd ios && fastlane run update_info_plist 'display_name:$(CUSTOM_PRODUCT_NAME)' plist_path:${projectName}/Info.plist`)
 
   const askDeveloperAccount = {
     type: 'input',
@@ -100,20 +161,6 @@ const initFastlane = async ({ ios, system, template, filesystem, prompt, print, 
     message: 'App Connect Team ID?'
   }
 
-  flSpinner.stop()
-
-  // ask a series of questions
-  const questions = [askDeveloperAccount, askITunesTeamId, askAppConnectTeamId]
-  const answers = await prompt.ask(questions)
-
-  await template.generate({
-    template: 'fastlane/ios/Appfile',
-    target: 'ios/fastlane/Appfile',
-    props: {
-      ...answers
-    }
-  })
-
   const askCertRepo = {
     type: 'input',
     initial: 'git@github.com:solinor/ciproject-ios-certs.git',
@@ -128,75 +175,29 @@ const initFastlane = async ({ ios, system, template, filesystem, prompt, print, 
     message: 'What is your app bundle id?'
   }
 
-  const matchQuestions = [askCertRepo, askAppId]
-  const matchAnswers = await prompt.ask(matchQuestions)
+  const askMatchPassword = {
+    type: 'input',
+    initial: 'password',
+    name: 'matchPassword',
+    message: 'What do you want to be your match repo password?'
+  }
 
-  flSpinner.start()
-
-  const appId = matchAnswers.appId
-
-  info(matchAnswers)
-  await template.generate({
-    template: 'fastlane/ios/Matchfile',
-    target: 'ios/fastlane/Matchfile',
-    props: {
-      ...matchAnswers,
-      developerAccount: answers.developerAccount,
-      appIds: `["${appId}", "${appId}.dev", "${appId}.staging"]`
-    }
-  })
-
-  await template.generate({
-    template: 'fastlane/ios/Pluginfile',
-    target: 'ios/fastlane/Pluginfile',
-    props: { }
-  })
-
-  const slackHook = ''
-
-  await template.generate({
-    template: 'fastlane/ios/Fastfile',
-    target: 'ios/fastlane/Fastfile',
-    props: {
-      projectName,
-      appId: matchAnswers['appId'],
-      slackHook
-    }
-  })
-
-  ios.produceApp({
-    appId,
-    devId: answers.developerAccount,
-    appName: projectName
-  })
-  ios.produceApp({
-    appId: `${appId}.dev`,
-    devId: answers.developerAccount,
-    appName: `${projectName} Dev`
-  })
-  ios.produceApp({
-    appId: `${appId}.staging`,
-    devId: answers.developerAccount,
-    appName: `${projectName} Staging`
-  })
-  ios.matchSync({ certType: 'development', password: 'password' })
-  ios.matchSync({ certType: 'appstore', password: 'password' })
-  //ios.setXcodeMatch()
-
-  flSpinner.succeed('Fastlane ready for iOS')
-  success(`${print.checkmark} Fastlane iOS setup success`)
-}
-
-const initMatch = async ({ ios, system, template, filesystem, prompt, print, print: { info, spin, success } }) => {
+  // ask a series of questions
+  const questions = [askDeveloperAccount, askITunesTeamId, askAppConnectTeamId, askCertRepo, askAppId, askMatchPassword]
+  const answers = await prompt.ask(questions)
+  return {
+    ...answers,
+    slackHook: '',
+    projectName
+  }
 }
 
 const run = async (toolbox) => {
   const { print } = toolbox
 
-  // const config = await askQuestions(toolbox)
-  await initFastlane(toolbox)
-  await initXcode(toolbox)
-  // await initMatch(toolbox)
+  const config = await getInput(toolbox)
+  await initFastlane(toolbox, config)
+  await initXcode(toolbox, config)
 
   print.success(`${print.checkmark} iOS setup success`)
 }

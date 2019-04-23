@@ -9,10 +9,10 @@ module.exports = toolbox => {
         resolve()
       })
     },
-    addBuildConfigurations: async () => {
+    addBuildConfigurations: async (teamId) => {
       const { print, system, meta } = toolbox
       return new Promise((resolve, reject) => {
-        system.run(`ruby ${meta.src}/ios.rb make_new_build_configurations`)
+        system.run(`ruby ${meta.src}/ios.rb make_new_build_configurations ${teamId}`)
         resolve()
       })
     },
@@ -44,7 +44,7 @@ module.exports = toolbox => {
     matchSync: async ({ certType, password }) => {
       const { print, system } = toolbox
       return new Promise((resolve, reject) => {
-        const output = system.run(`(export MATCH_PASSWORD=${password}; bundle exec fastlane match ${certType})`)
+        const output = system.run(`cd ios && (export MATCH_PASSWORD=${password}; bundle exec fastlane match ${certType})`)
         resolve(output)
       })
     }

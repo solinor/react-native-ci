@@ -18,7 +18,7 @@ def clone_build_config(project, dest, from_build_config, build_config_name)
   end
 end
 
-def deep_clone_build_config(project, variant, build_type)
+def deep_clone_build_config(project, variant, build_type, team_id)
 
   #
   # Clone a build configuration both at the project level and at target level.
@@ -32,8 +32,7 @@ def deep_clone_build_config(project, variant, build_type)
 
   project.targets.each do |target|
     original_target_build_config = target.build_configuration_list[build_type]
-    # TODO Get the development team from ios.js
-    original_target_build_config.build_settings['DEVELOPMENT_TEAM'] = "7J6HDCNPKE"
+    original_target_build_config.build_settings['DEVELOPMENT_TEAM'] = team_id
 
     unless target.name.end_with?("Tests")
       original_target_build_config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = "match Development $(PRODUCT_BUNDLE_IDENTIFIER)"
@@ -44,11 +43,11 @@ def deep_clone_build_config(project, variant, build_type)
 end
 
 
-def make_new_build_configurations(project)
-  deep_clone_build_config(project, 'Dev', 'Debug')
-  deep_clone_build_config(project, 'Dev', 'Release')
-  deep_clone_build_config(project, 'Staging', 'Debug')
-  deep_clone_build_config(project, 'Staging', 'Release')
+def make_new_build_configurations(project, team_id)
+  deep_clone_build_config(project, 'Dev', 'Debug', team_id)
+  deep_clone_build_config(project, 'Dev', 'Release', team_id)
+  deep_clone_build_config(project, 'Staging', 'Debug', team_id)
+  deep_clone_build_config(project, 'Staging', 'Release', team_id)
 end
 
 def add_bundle_id_suffixes(project)
@@ -116,7 +115,8 @@ project = Xcodeproj::Project.open(project_path)
 if COMMAND == "add_schemes"
   add_schemes(project_path)
 elsif COMMAND == "make_new_build_configurations"
-  make_new_build_configurations(project)
+  team_id = ARGV[1]
+  make_new_build_configurations(project, team_id)
   project.save
 elsif COMMAND == "add_bundle_id_suffixes"
   add_bundle_id_suffixes(project)
