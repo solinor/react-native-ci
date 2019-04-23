@@ -77,6 +77,9 @@ const initFastlane = async ({ ios, system, template, filesystem, prompt, print, 
   })[0]
   const projectName = xcodeProjectName.split(/\/|\./)[1]
 
+  // TODO Move this to initXcode
+  await system.run(`cd ios && fastlane run update_info_plist 'display_name:$(CUSTOM_PRODUCT_NAME)' plist_path:${projectName}/Info.plist`)
+
   const askDeveloperAccount = {
     type: 'input',
     initial: 'apple-developers@solinor.com',

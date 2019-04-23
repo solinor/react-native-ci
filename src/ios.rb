@@ -2,17 +2,16 @@
 
 require 'xcodeproj'
 
-def clone_build_config(project, dest, from_build_config, name)
+def clone_build_config(project, dest, from_build_config, build_config_name)
   # Heavily inspired by Xcodeproj::Project.add_build_configuration
-  existing_build_config = dest.build_configuration_list[name]
+  existing_build_config = dest.build_configuration_list[build_config_name]
 
   if existing_build_config
     existing_build_config
   else
     new_config = project.new(Xcodeproj::Project::XCBuildConfiguration)
     new_config.build_settings = Xcodeproj::Project::ProjectHelper.deep_dup(from_build_config.build_settings)
-    new_config.name = name
-
+    new_config.name = build_config_name
 
     dest.build_configuration_list.build_configurations << new_config
     new_config
@@ -62,12 +61,16 @@ def add_bundle_id_suffixes(project)
 
   # 2. Create release phase-specific suffixes
   main_target.build_configurations.each do |config|
+    config.build_settings['CUSTOM_PRODUCT_NAME'] = '$(PRODUCT_NAME)'
+
     if config.name == 'Staging Debug' or config.name == 'Staging Release'
       config.build_settings['BUNDLE_ID_SUFFIX'] = '.staging'
+      config.build_settings['CUSTOM_PRODUCT_NAME'] = '$(PRODUCT_NAME) Staging'
     end
 
     if config.name == 'Dev Debug' or config.name == 'Dev Release'
       config.build_settings['BUNDLE_ID_SUFFIX'] = '.dev'
+      config.build_settings['CUSTOM_PRODUCT_NAME'] = '$(PRODUCT_NAME) Dev'
     end
   end
 
