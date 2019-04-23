@@ -191,8 +191,8 @@ const run = async (toolbox) => {
   const { print } = toolbox
 
   // const config = await askQuestions(toolbox)
-//  await initXcode(toolbox)
-  // await initFastlane(toolbox)
+  await initFastlane(toolbox)
+  await initXcode(toolbox)
   // await initMatch(toolbox)
 
   print.success(`${print.checkmark} iOS setup success`)
