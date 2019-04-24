@@ -81,8 +81,8 @@ module.exports = toolbox => {
       const checkKeyStore = `sudo keytool -v -list -keystore android/app/${storeFile} -storepass ${storePassword} -alias ${alias}`
       let keystore
       try {
-        print.info(`Existing certificate found, using it.`)
         keystore = await system.run(checkKeyStore)
+        print.info(`Existing certificate found, using it.`)
       } catch (e) {
         print.info(`${print.checkmark} No existing certificate found.`)
       }

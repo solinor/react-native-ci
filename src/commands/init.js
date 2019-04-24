@@ -1,20 +1,14 @@
-
-
-
-const runInit = async toolbox => {
-  const { print } = toolbox
-
-  const config = await askQuestions(toolbox)
-
-  await initFastlane(toolbox)
-  await initCircleCI(toolbox, config)
-  await setupGradle(toolbox, config)
-
-  print.success(`${print.checkmark} Initialization success`)
-}
-
 module.exports = {
   name: 'init',
-  alias: 'e',
-  run: runInit
+  alias: ['i'],
+  run: async toolbox => {
+
+    const { runShared } = require('../flows/shared')
+    const { runAndroid } = require('../flows/android')
+    const { runIOS } = require('../flows/ios')
+
+    const sharedConfig = await runShared(toolbox, {})
+    await runAndroid(toolbox, sharedConfig)
+    await runIOS(toolbox, sharedConfig)
+  }
 }

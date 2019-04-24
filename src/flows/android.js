@@ -24,8 +24,6 @@ const initAndroid = async ({ android, http, prompt, print }, { project, org, ap
     aliasPassword: '123456'
   })
 
-  print.info(keystoreFiles)
-
   print.info('Store keystore to secret variables')
   const api = http.create({
     baseURL: 'https://circleci.com/api/v1.1/'
@@ -33,7 +31,7 @@ const initAndroid = async ({ android, http, prompt, print }, { project, org, ap
 
   await api.post(
     `project/github/${org}/${project}/envvar?circle-token=${apiToken}`,
-    {name: 'KEYSTORE', value: keystoreFiles.keystore},
+    {name: 'KEYSTORE', value: keystoreFiles.encodedKeystore},
     {headers: {'Content-Type': 'application/json'}}
   )
 
@@ -44,13 +42,15 @@ const initAndroid = async ({ android, http, prompt, print }, { project, org, ap
     {headers: {'Content-Type': 'application/json'}}
   )
 
-  print.info('Store Google Play JSON to secret variables')
-  const encodedPlayStoreJSON = android.base64EncodeJson(jsonPath)
-  await api.post(
-    `project/github/${org}/${project}/envvar?circle-token=${apiToken}`,
-    {name: 'GOOGLE_PLAY_JSON', value: encodedPlayStoreJSON},
-    {headers: {'Content-Type': 'application/json'}}
-  )
+  if (jsonPath !== '' && jsonPath !== undefined) {
+    print.info('Store Google Play JSON to secret variables')
+    const encodedPlayStoreJSON = android.base64EncodeJson(jsonPath)
+    await api.post(
+      `project/github/${org}/${project}/envvar?circle-token=${apiToken}`,
+      {name: 'GOOGLE_PLAY_JSON', value: encodedPlayStoreJSON},
+      {headers: {'Content-Type': 'application/json'}}
+    )
+  }
 }
 
 const initFastlane = async ({ system, android, template, filesystem, print }) => {
