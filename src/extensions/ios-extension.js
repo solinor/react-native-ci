@@ -34,10 +34,10 @@ module.exports = toolbox => {
         resolve()
       })
     },
-    produceApp: async ({ appId, devId, appName}) => {
+    produceApp: async ({ appId, devId, appName, developerTeamId, iTunesTeamId}) => {
       const { print, system } = toolbox
       return new Promise((resolve, reject) => {
-        const output = system.run(`fastlane produce -u ${devId} -a ${appId} --app_name "${appName}"`)
+        const output = system.run(`fastlane produce -u ${devId} -a ${appId} --app_name "${appName}" --team_id "${developerTeamId}" --itc_team_id "${iTunesTeamId}"`)
         resolve(output)
       })
     },
