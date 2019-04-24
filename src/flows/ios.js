@@ -1,3 +1,15 @@
+module.exports.runIOS = async (toolbox, config) =>  {
+  const input = await getInput(toolbox)
+  await initFastlane(toolbox, {
+    ...config,
+    ...input
+  })
+  await initXcode(toolbox, {
+    ...config,
+    ...input
+  })
+}
+
 const initXcode = async ({ print: { spin }, template, npm, system, ios }, config) => {
   const iosSpinner = spin('Modifying iOS Project')
   await ios.addSchemes()
@@ -56,12 +68,10 @@ const initXcode = async ({ print: { spin }, template, npm, system, ios }, config
   spinner.succeed('react-native-schemes-manager installed..')
 }
 
-const initFastlane = async ({ ios, system, template, filesystem, prompt, print, print: { info, spin, success } }, config) => {
+const initFastlane = async ({ ios, system, template, filesystem, http, prompt, print, print: { info, spin, success } }, config) => {
   const flSpinner = spin('Preparing Fastlane for iOS..')
-  info('Preparing Fastlane for iOS..')
   const fastlanePath = system.which('fastlane')
   if (!fastlanePath) {
-    info('No fastlane found, install...')
     await system.run('sudo gem install fastlane -NV')
   }
 
@@ -109,23 +119,38 @@ const initFastlane = async ({ ios, system, template, filesystem, prompt, print, 
     }
   })
 
-  ios.produceApp({
+  await ios.produceApp({
     appId,
     devId: config.developerAccount,
-    appName: config.projectName
+    appName: config.projectName,
+    developerTeamId: config.developerTeamId,
+    iTunesTeamId: config.iTunesTeamId
   })
-  ios.produceApp({
+  await ios.produceApp({
     appId: `${appId}.dev`,
     devId: config.developerAccount,
-    appName: `${config.projectName} Dev`
+    appName: `${config.projectName} Dev`,
+    developerTeamId: config.developerTeamId,
+    iTunesTeamId: config.iTunesTeamId
   })
-  ios.produceApp({
+  await ios.produceApp({
     appId: `${appId}.staging`,
     devId: config.developerAccount,
-    appName: `${config.projectName} Staging`
+    appName: `${config.projectName} Staging`,
+    developerTeamId: config.developerTeamId,
+    iTunesTeamId: config.iTunesTeamId
   })
-  ios.matchSync({ certType: 'development', password: config.matchPassword })
-  ios.matchSync({ certType: 'appstore', password: config.matchPassword })
+  await ios.matchSync({ certType: 'appstore', password: config.matchPassword })
+  await ios.matchSync({ certType: 'development', password: config.matchPassword })
+
+  const api = http.create({
+    baseURL: 'https://circleci.com/api/v1.1/'
+  })
+  await api.post(
+    `project/github/${config.org}/${config.project}/envvar?circle-token=${config.apiToken}`,
+    {name: 'MATCH_PASSWORD', value: config.matchPassword},
+    {headers: {'Content-Type': 'application/json'}}
+  )
 
   flSpinner.succeed('Fastlane ready for iOS')
   success(`${print.checkmark} Fastlane iOS setup success`)
@@ -190,20 +215,4 @@ const getInput = async ({ system, filesystem, prompt }) => {
     slackHook: '',
     projectName
   }
-}
-
-const run = async (toolbox) => {
-  const { print } = toolbox
-
-  const config = await getInput(toolbox)
-  await initFastlane(toolbox, config)
-  await initXcode(toolbox, config)
-
-  print.success(`${print.checkmark} iOS setup success`)
-}
-
-module.exports = {
-  name: 'ios',
-  alias: 'i',
-  run: run
 }
