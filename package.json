@@ -1,10 +1,11 @@
 {
   "name": "react-native-ci",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "react-native-ci CLI",
   "bin": {
     "react-native-ci": "bin/react-native-ci"
   },
+  "preferGlobal": true,
   "scripts": {
     "format": "prettier --write **/*.{js,json} && standard --fix",
     "lint": "standard",
@@ -12,6 +13,12 @@
     "watch": "jest --watch",
     "snapupdate": "jest --updateSnapshot",
     "coverage": "jest --coverage"
+  },
+  "repository": "solinor/react-native-ci",
+  "author": {
+    "name": "Juha Linnanen",
+    "email": "juha.linnanen@gofore.com",
+    "url": "https://github.com/solinor/react-native-ci"
   },
   "files": [
     "LICENSE",
