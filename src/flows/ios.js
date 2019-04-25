@@ -168,41 +168,35 @@ const getInput = async ({ system, filesystem, prompt }) => {
 
   const askDeveloperAccount = {
     type: 'input',
-    initial: 'apple-developers@solinor.com',
     name: 'developerAccount',
     message: 'Your Apple developer account?'
   }
   const askITunesTeamId = {
     type: 'input',
-    initial: '7J6HDCNPKE',
     name: 'developerTeamId',
     message: 'Your iTunes Team ID?'
   }
 
   const askAppConnectTeamId = {
     type: 'input',
-    initial: '1355301',
     name: 'iTunesTeamId',
     message: 'App Connect Team ID?'
   }
 
   const askCertRepo = {
     type: 'input',
-    initial: 'git@github.com:solinor/ciproject-ios-certs.git',
     name: 'certRepo',
     message: 'Specify path to iOS Signing key repo'
   }
 
   const askAppId = {
     type: 'input',
-    initial: 'com.gofore.circletest',
     name: 'appId',
     message: 'What is your app bundle id?'
   }
 
   const askMatchPassword = {
     type: 'input',
-    initial: 'password',
     name: 'matchPassword',
     message: 'What do you want to be your match repo password?'
   }
