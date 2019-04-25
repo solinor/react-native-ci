@@ -8,13 +8,11 @@ const askQuestions = async ({ prompt }) => {
   // text input
   const askOrganization = {
     type: 'input',
-    initial: 'solinor',
     name: 'org',
     message: 'Your github organization?'
   }
   const askProject = {
     type: 'input',
-    initial: 'circletest',
     name: 'project',
     message: 'Your github project name?'
   }
