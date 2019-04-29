@@ -62,7 +62,7 @@ module.exports = {
     }
 }
 
-```
+```
 
 ## What does it actually do?
 
