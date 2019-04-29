@@ -39,8 +39,30 @@ Run command in your project root:
 react-native-ci init
 ```
 
-Provide the required information when prompted.
+Provide the required information when prompted. Optionally you can define config file, which includes
+default values to the questions. This is useful when you test command multiple times and don't want
+to have to input all the values manually each time. Especially useful when developing and testing
+react-native-ci itself!
 
+Example config file: (react-native-ci.config.js)
+
+```
+module.exports = {
+    defaults: {
+        githubOrg: "org-name",
+        repo: "github-repo",
+        circleApi: "circleApiToken",
+        googleJsonPath: "path/to/google/json",
+        appleDevAccount: "dev@company.com",
+        iTunesTeamId: "itunes-team-id",
+        appConnectTeamId: "app-connect-team-id",
+        certRepoUrl: "git@github.com:company/project-ios-certs.git",
+        appId: "com.company.greatapp",
+        matchPassword: "password",
+    }
+}
+
+```
 
 ## What does it actually do?
 
