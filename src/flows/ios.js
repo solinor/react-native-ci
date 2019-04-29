@@ -1,5 +1,5 @@
 module.exports.runIOS = async (toolbox, config) =>  {
-  const input = await getInput(toolbox)
+  const input = await getInput(toolbox, config)
   await initFastlane(toolbox, {
     ...config,
     ...input
@@ -157,7 +157,7 @@ const initFastlane = async ({ ios, system, template, filesystem, http, prompt, p
 }
 
 
-const getInput = async ({ system, filesystem, prompt }) => {
+const getInput = async ({ system, filesystem, prompt }, { defaults = {} }) => {
   const xcodeProjectName = filesystem.find('ios/', {
     matching: '*.xcodeproj',
     directories: true,
@@ -168,35 +168,41 @@ const getInput = async ({ system, filesystem, prompt }) => {
 
   const askDeveloperAccount = {
     type: 'input',
+    initial: defaults.appleDevAccount,
     name: 'developerAccount',
     message: 'Your Apple developer account?'
   }
   const askITunesTeamId = {
     type: 'input',
+    initial: defaults.iTunesTeamId,
     name: 'developerTeamId',
     message: 'Your iTunes Team ID?'
   }
 
   const askAppConnectTeamId = {
     type: 'input',
+    initial: defaults.appConnectTeamId,
     name: 'iTunesTeamId',
     message: 'App Connect Team ID?'
   }
 
   const askCertRepo = {
     type: 'input',
+    initial: defaults.certRepoUrl,
     name: 'certRepo',
     message: 'Specify path to iOS Signing key repo'
   }
 
   const askAppId = {
     type: 'input',
+    initial: defaults.appId,
     name: 'appId',
     message: 'What is your app bundle id?'
   }
 
   const askMatchPassword = {
     type: 'input',
+    initial: defaults.matchPassword,
     name: 'matchPassword',
     message: 'What do you want to be your match repo password?'
   }
