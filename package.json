@@ -43,7 +43,8 @@
     "standard": "^12.0.1"
   },
   "jest": {
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "testMatch": [ "**/__tests__/**/*.[jt]s?(x)" ]
   },
   "standard": {
     "env": [
