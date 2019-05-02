@@ -76,7 +76,9 @@ def add_bundle_id_suffixes(project)
   # 3. Combine these two
   main_target.build_configurations.each do |config|
     puts "adding bundle suffix to " + config.name
-    config.build_settings['PRODUCT_BUNDLE_IDENTIFIER'] = original_bundle_id + "$(BUNDLE_ID_SUFFIX)"
+    if !original_bundle_id.include? "$(BUNDLE_ID_SUFFIX)"
+      config.build_settings['PRODUCT_BUNDLE_IDENTIFIER'] = original_bundle_id + "$(BUNDLE_ID_SUFFIX)"
+    end
   end
 end
 
