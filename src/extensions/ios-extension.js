@@ -5,14 +5,14 @@ module.exports = toolbox => {
     getProjectFilePath: async () => {
       const { print, system, meta } = toolbox
       return new Promise((resolve, reject) => {
-        system.run(`ruby ${meta.src}/ios.rb get_project_path`)
+        system.run(`BUNDLE_GEMFILE=${meta.src}/../Gemfile bundle exec ruby ${meta.src}/ios.rb get_project_path`)
         resolve()
       })
     },
     addBuildConfigurations: async (teamId) => {
       const { print, system, meta } = toolbox
       return new Promise((resolve, reject) => {
-        system.run(`ruby ${meta.src}/ios.rb make_new_build_configurations ${teamId}`)
+        system.run(`BUNDLE_GEMFILE=${meta.src}/../Gemfile bundle exec ruby ${meta.src}/ios.rb make_new_build_configurations ${teamId}`)
         resolve()
       })
     },
@@ -22,7 +22,7 @@ module.exports = toolbox => {
         // FIXME: there is some race condition going on here.
         // without setTimeout here, it won't be applied :shrug:
         setTimeout(() => {
-          system.run(`ruby ${meta.src}/ios.rb add_bundle_id_suffixes`)
+          system.run(`BUNDLE_GEMFILE=${meta.src}/../Gemfile bundle exec ruby ${meta.src}/ios.rb add_bundle_id_suffixes`)
           resolve()
         }, 200)
       })
@@ -30,7 +30,7 @@ module.exports = toolbox => {
     addSchemes: async () => {
       const { print, system, meta } = toolbox
       return new Promise((resolve, reject) => {
-        system.run(`ruby ${meta.src}/ios.rb add_schemes`)
+        system.run(`BUNDLE_GEMFILE=${meta.src}/../Gemfile bundle exec ruby ${meta.src}/ios.rb add_schemes`)
         resolve()
       })
     },
