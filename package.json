@@ -1,17 +1,27 @@
 {
   "name": "react-native-ci",
-  "version": "0.1.0",
+  "version": "0.1.4",
   "description": "react-native-ci CLI",
   "bin": {
     "react-native-ci": "bin/react-native-ci"
   },
+  "preferGlobal": true,
   "scripts": {
     "format": "prettier --write **/*.{js,json} && standard --fix",
     "lint": "standard",
     "test": "jest",
     "watch": "jest --watch",
     "snapupdate": "jest --updateSnapshot",
-    "coverage": "jest --coverage"
+    "coverage": "jest --coverage",
+    "ci:test": "jest",
+    "ci:publish": "yarn semantic-release",
+    "semantic-release": "semantic-release"
+  },
+  "repository": "solinor/react-native-ci",
+  "author": {
+    "name": "Juha Linnanen",
+    "email": "juha.linnanen@gofore.com",
+    "url": "https://github.com/solinor/react-native-ci"
   },
   "files": [
     "LICENSE",
@@ -26,12 +36,17 @@
     "install-packages": "^0.2.5"
   },
   "devDependencies": {
+    "@semantic-release/git": "^7.0.8",
     "jest": "^23.6.0",
     "prettier": "^1.12.1",
+    "semantic-release": "^15.13.3",
     "standard": "^12.0.1"
   },
   "jest": {
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/__tests__/**/*.[jt]s?(x)"
+    ]
   },
   "standard": {
     "env": [
@@ -41,5 +56,20 @@
   "prettier": {
     "semi": false,
     "singleQuote": true
+  },
+  "release": {
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/npm",
+      "@semantic-release/github",
+      [
+        "@semantic-release/git",
+        {
+          "assets": "package.json",
+          "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+        }
+      ]
+    ]
   }
 }

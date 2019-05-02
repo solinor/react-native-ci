@@ -1,25 +1,26 @@
 module.exports.runShared = async (toolbox, config) =>  {
-  const answers = await askQuestions(toolbox)
+  const answers = await askQuestions(toolbox, config)
   await initCircleCI(toolbox, config)
   return answers
 }
 
-const askQuestions = async ({ prompt }) => {
+const askQuestions = async ({ prompt }, { defaults = {} }) => {
   // text input
   const askOrganization = {
     type: 'input',
-    initial: 'solinor',
+    initial: defaults.githubOrg,
     name: 'org',
     message: 'Your github organization?'
   }
   const askProject = {
     type: 'input',
-    initial: 'circletest',
+    initial: defaults.repo,
     name: 'project',
     message: 'Your github project name?'
   }
   const askApiToken = {
     type: 'input',
+    initial: defaults.circleApi,
     name: 'apiToken',
     message: 'Your CircleCI API token?'
   }

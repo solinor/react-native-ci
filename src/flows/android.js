@@ -4,18 +4,19 @@ module.exports.runAndroid = async (toolbox, config) => {
   await setupGradle(toolbox, config)
 }
 
-const askQuestion = async (prompt) => {
+const askQuestion = async (prompt, defaults = {}) => {
   const askGooglePlayJSONPath = {
     type: 'input',
+    initial: defaults.googleJsonPatch,
     name: 'jsonPath',
     message: 'Path to Google Play Store JSON?'
   }
   return prompt.ask(askGooglePlayJSONPath)
 }
 
-const initAndroid = async ({ android, http, prompt, print }, { project, org, apiToken }) => {
+const initAndroid = async ({ android, http, prompt, print }, { project, org, apiToken, defaults }) => {
 
-  const { jsonPath } = await askQuestion(prompt)
+  const { jsonPath } = await askQuestion(prompt, defaults)
 
   const keystoreFiles = await android.createKeystore({
     name: project,
