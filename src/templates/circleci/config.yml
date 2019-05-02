@@ -98,10 +98,10 @@ jobs:
         path: ~/project
 
     - restore_cache:
-        key: react-native-ci-{{ checksum "../package-lock.json" }}
+        key: react-native-ci-iOS-{{ checksum "../package-lock.json" }}
     - run: npm install
     - save_cache:
-        key: react-native-ci-{{ checksum "../package-lock.json" }}
+        key: react-native-ci-iOS-{{ checksum "../package-lock.json" }}
         paths:
         - ../node_modules
 
