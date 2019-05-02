@@ -23,7 +23,7 @@ jobs:
   android:
     working_directory: ~/project/android
     docker:
-    - image: circleci/android:api-27-node8-alpha
+    - image: circleci/android:api-28-node
     steps:
     - checkout:
         path: ~/project
@@ -53,7 +53,7 @@ jobs:
     environment:
       ANDROID_ENVIRONMENT: dev
     docker:
-      - image: circleci/android:api-27-node8-alpha
+      - image: circleci/android:api-28-node
     steps:
       - checkout:
           path: ~/project
@@ -88,7 +88,7 @@ jobs:
 
   ios:
     macos:
-      xcode: "9.4.1"
+      xcode: "10.1.0"
     working_directory: ~/project/ios
     environment:
       FL_OUTPUT_DIR: ~/project/output
@@ -110,12 +110,13 @@ jobs:
         command:  echo "ruby-2.4" > ~/.ruby-version
     - restore_cache:
         key: 1-gems-ios-{{ checksum "Gemfile.lock" }}
-    - run:
-        name: Fetch CocoaPods Specs
-        command: |
-          curl https://cocoapods-specs.circleci.com/fetch-cocoapods-repo-from-s3.sh | bash -s cf
+# TODO Detect the existence of the Podfile and enable this
+#    - run:
+#        name: Fetch CocoaPods Specs
+#        command: |
+#          curl https://cocoapods-specs.circleci.com/fetch-cocoapods-repo-from-s3.sh | bash -s cf
     - run: bundle install --path vendor/bundle
-    - run: bundle exec pod install
+#    - run: bundle exec pod install
     - run: bundle update fastlane
     - save_cache:
         key: 1-gems-ios-{{ checksum "Gemfile.lock" }}
