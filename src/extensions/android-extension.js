@@ -77,8 +77,8 @@ module.exports = toolbox => {
       const { name, storePassword, alias, aliasPassword } = options
       const storeFile = `${name}-key.keystore`
 
-      print.info('Checking if CircleCI keystore already exists. For this we will need your admin password.')
-      const checkKeyStore = `sudo keytool -v -list -keystore android/app/${storeFile} -storepass ${storePassword} -alias ${alias}`
+      print.info('Checking if CircleCI keystore already exists.')
+      const checkKeyStore = `keytool -v -list -keystore android/app/${storeFile} -storepass ${storePassword} -alias ${alias}`
       let keystore
       try {
         keystore = await system.run(checkKeyStore)
@@ -90,7 +90,7 @@ module.exports = toolbox => {
       let encodedKeystore
       if (!keystore) {
         print.info('Generate new cert.')
-        const command = `sudo keytool -genkey -v -keystore android/app/${storeFile} -storepass ${storePassword} -alias ${alias} -keypass ${aliasPassword} -dname 'cn=Unknown, ou=Unknown, o=Unknown, c=Unknown' -keyalg RSA -keysize 2048 -validity 10000`
+        const command = `keytool -genkey -v -keystore android/app/${storeFile} -storepass ${storePassword} -alias ${alias} -keypass ${aliasPassword} -dname 'cn=Unknown, ou=Unknown, o=Unknown, c=Unknown' -keyalg RSA -keysize 2048 -validity 10000`
         await system.run(command)
         const encodeCommand = `openssl base64 -A -in android/app/${storeFile}`
         encodedKeystore = await system.run(encodeCommand)
