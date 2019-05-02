@@ -16,7 +16,7 @@ platform :ios do
 
   before_all do
     setup_circle_ci
-    IOS_VERSION_NUMBER=get_version_number(xcodeproj: "<%= props.projectName %>.xcodeproj", , target: "<%= props.projectName %>")
+    IOS_VERSION_NUMBER=get_version_number(xcodeproj: "<%= props.projectName %>.xcodeproj", target: "<%= props.projectName %>")
   end
 
   desc "Build Release debug version"
