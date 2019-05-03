@@ -96,7 +96,6 @@ jobs:
     steps:
     - checkout:
         path: ~/project
-
     - restore_cache:
         key: react-native-ci-iOS-{{ checksum "../package-lock.json" }}
     - run: npm install
@@ -104,10 +103,15 @@ jobs:
         key: react-native-ci-iOS-{{ checksum "../package-lock.json" }}
         paths:
         - ../node_modules
-
     - run:
         name: Set Ruby Version
         command:  echo "ruby-2.4" > ~/.ruby-version
+    - run:
+        name: Configure Bundler
+        command: |
+          echo 'export BUNDLER_VERSION=$(cat Gemfile.lock | tail -1 | tr -d " ")' >> $BASH_ENV
+          source $BASH_ENV
+          gem install bundler        
     - restore_cache:
         key: 1-gems-ios-{{ checksum "Gemfile.lock" }}
 # TODO Detect the existence of the Podfile and enable this
