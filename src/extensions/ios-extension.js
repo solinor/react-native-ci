@@ -39,6 +39,7 @@ module.exports = toolbox => {
     produceApp: async ({
       appId,
       devId,
+      developerPassword,
       appName,
       developerTeamId,
       iTunesTeamId

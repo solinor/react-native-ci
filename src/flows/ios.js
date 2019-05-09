@@ -1,4 +1,4 @@
-module.exports.runIOS = async (toolbox, config) =>  {
+module.exports.runIOS = async (toolbox, config) => {
   const input = await getInput(toolbox, config)
   await initFastlane(toolbox, {
     ...config,
@@ -10,37 +10,48 @@ module.exports.runIOS = async (toolbox, config) =>  {
   })
 }
 
-const initXcode = async ({ print: { spin }, template, npm, system, ios }, config) => {
+const initXcode = async (
+  { print: { spin }, template, npm, system, ios },
+  config
+) => {
   const iosSpinner = spin('Modifying iOS Project')
   await ios.addSchemes()
   await ios.addBuildConfigurations(config.developerTeamId)
   await ios.addBundleIdSuffixes()
-  await system.run(`cd ios && fastlane run update_info_plist 'display_name:$(CUSTOM_PRODUCT_NAME)' plist_path:${config.projectName}/Info.plist`)
+  await system.run(
+    `cd ios && fastlane run update_info_plist 'display_name:$(CUSTOM_PRODUCT_NAME)' plist_path:${
+      config.projectName
+    }/Info.plist`
+  )
 
   iosSpinner.succeed('iOS Project modified')
 
-  const rnConfigSpinner = spin('Installing and configuring react-native-config..')
+  const rnConfigSpinner = spin(
+    'Installing and configuring react-native-config..'
+  )
   await npm.installPackage('react-native-config')
-  await system.spawn('react-native link react-native-config', { stdio: 'ignore'})
+  await system.spawn('react-native link react-native-config', {
+    stdio: 'ignore'
+  })
   rnConfigSpinner.succeed('react-native-config installed')
 
   const envSpinner = spin('Generating environment config files..')
   await template.generate({
     template: '.env.ejs',
     target: '.env.dev',
-    props: { env: 'DEV'}
+    props: { env: 'DEV' }
   })
 
   await template.generate({
     template: '.env.ejs',
     target: '.env.staging',
-    props: { env: 'STAGING'}
+    props: { env: 'STAGING' }
   })
 
   await template.generate({
     template: '.env.ejs',
     target: '.env.prod',
-    props: { env: 'PRODUCTION'}
+    props: { env: 'PRODUCTION' }
   })
   envSpinner.succeed('Environments generated')
 
@@ -53,22 +64,29 @@ const initXcode = async ({ print: { spin }, template, npm, system, ios }, config
   npm.addConfigSection({
     key: 'xcodeSchemes',
     value: {
-      Debug: [
-        'Dev Debug',
-        'Staging Debug'
-      ],
-      Release: [
-        'Dev Release',
-        'Staging Release'
-      ],
-      'projectDirectory': 'iOS'
+      Debug: ['Dev Debug', 'Staging Debug'],
+      Release: ['Dev Release', 'Staging Release'],
+      projectDirectory: 'iOS'
     }
   })
   await system.exec('npm run postinstall')
   spinner.succeed('react-native-schemes-manager installed..')
 }
 
-const initFastlane = async ({ ios, system, template, filesystem, http, circle, prompt, print, print: { info, spin, success } }, config) => {
+const initFastlane = async (
+  {
+    ios,
+    system,
+    template,
+    filesystem,
+    http,
+    circle,
+    prompt,
+    print,
+    print: { info, spin, success }
+  },
+  config
+) => {
   const flSpinner = spin('Preparing Fastlane for iOS..')
   const fastlanePath = system.which('fastlane')
   if (!fastlanePath) {
@@ -91,7 +109,7 @@ const initFastlane = async ({ ios, system, template, filesystem, http, circle, p
 
   flSpinner.start()
 
-  const { appId } = config
+  const { appId } = config
 
   await template.generate({
     template: 'fastlane/ios/Matchfile',
@@ -106,7 +124,7 @@ const initFastlane = async ({ ios, system, template, filesystem, http, circle, p
   await template.generate({
     template: 'fastlane/ios/Pluginfile',
     target: 'ios/fastlane/Pluginfile',
-    props: { }
+    props: {}
   })
 
   await template.generate({
@@ -118,6 +136,8 @@ const initFastlane = async ({ ios, system, template, filesystem, http, circle, p
       slackHook: config.slackHook
     }
   })
+
+  await system.run(`fastlane fastlane-credentials add --username ${config.developerAccount} --password ${config.developerPassword}`)
 
   await ios.produceApp({
     appId,
@@ -141,7 +161,10 @@ const initFastlane = async ({ ios, system, template, filesystem, http, circle, p
     iTunesTeamId: config.iTunesTeamId
   })
   await ios.matchSync({ certType: 'appstore', password: config.matchPassword })
-  await ios.matchSync({ certType: 'development', password: config.matchPassword })
+  await ios.matchSync({
+    certType: 'development',
+    password: config.matchPassword
+  })
 
   const { org, project, apiToken } = config
   circle.postEnvVariable({
@@ -164,13 +187,15 @@ const initFastlane = async ({ ios, system, template, filesystem, http, circle, p
   success(`${print.checkmark} Fastlane iOS setup success`)
 }
 
-
-const getInput = async ({ system, filesystem, prompt, ios, print }, { defaults = {} }) => {
+const getInput = async (
+  { system, filesystem, prompt, ios, print },
+  { defaults = {} }
+) => {
   const xcodeProjectName = filesystem.find('ios/', {
     matching: '*.xcodeproj',
     directories: true,
     recursive: false,
-    files: false,
+    files: false
   })[0]
   const projectName = xcodeProjectName.split(/\/|\./)[1]
 
@@ -185,7 +210,7 @@ const getInput = async ({ system, filesystem, prompt, ios, print }, { defaults =
       type: 'password',
       name: 'developerPassword',
       message: 'Your Apple developer password?'
-    },
+    }
   ])
 
   let itcTeams = []
@@ -205,18 +230,26 @@ const getInput = async ({ system, filesystem, prompt, ios, print }, { defaults =
   }
   teamSpinner.succeed('Apple teams search successful')
 
-  const developerTeamId = await promptForTeamId(devTeams, {
-    message: 'Your Developer Team ID?',
-    multiMessage: 'Please select the developer team you want to use'
-  }, prompt)
-  
-  const iTunesTeamId = await promptForTeamId(itcTeams, {
-    message: 'Your App connect Team ID?',
-    multiMessage: 'Please select the app connect team you want to use'
-  }, prompt)
+  const developerTeamId = await promptForTeamId(
+    devTeams,
+    {
+      message: 'Your Developer Team ID?',
+      multiMessage: 'Please select the developer team you want to use'
+    },
+    prompt
+  )
 
-//  print.info(`dev team id: ${developerTeamId}`)
-//  print.info(`app team id: ${iTunesTeamId}`)
+  const iTunesTeamId = await promptForTeamId(
+    itcTeams,
+    {
+      message: 'Your App connect Team ID?',
+      multiMessage: 'Please select the app connect team you want to use'
+    },
+    prompt
+  )
+
+   print.info(`dev team id: ${developerTeamId}`)
+   print.info(`app team id: ${iTunesTeamId}`)
 
   const askCertRepo = {
     type: 'input',
@@ -247,7 +280,7 @@ const getInput = async ({ system, filesystem, prompt, ios, print }, { defaults =
     developerAccount,
     developerPassword,
     developerTeamId,
-    itunesTeamId,
+    iTunesTeamId,
     slackHook: '',
     projectName
   }
@@ -258,7 +291,12 @@ const promptForTeamId = async (teams, { message, multiMessage }, prompt) => {
     const { teamId } = await prompt.ask({
       type: 'select',
       name: 'teamId',
-      choices: teams.map((team) => `${team.name} (${team.id})`),
+      choices: teams.map(team => {
+        return {
+          name: team.id,
+          message: `${team.name} (${team.id})`,
+        }
+      }),
       message: multiMessage
     })
     return teamId
