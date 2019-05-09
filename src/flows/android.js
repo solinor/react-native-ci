@@ -14,7 +14,7 @@ const askQuestion = async (prompt, defaults = {}) => {
   return prompt.ask(askGooglePlayJSONPath)
 }
 
-const initAndroid = async ({ android, http, prompt, print }, { project, org, apiToken, defaults }) => {
+const initAndroid = async ({ android, http, prompt, print, circle }, { project, org, apiToken, defaults }) => {
 
   const { jsonPath } = await askQuestion(prompt, defaults)
 
@@ -26,31 +26,33 @@ const initAndroid = async ({ android, http, prompt, print }, { project, org, ap
   })
 
   print.info('Store keystore to secret variables')
-  const api = http.create({
-    baseURL: 'https://circleci.com/api/v1.1/'
+  circle.postEnvVariable({
+    org,
+    project,
+    apiToken,
+    key: 'KEYSTORE',
+    value: keystoreFiles.encodedKeystore
   })
 
-  await api.post(
-    `project/github/${org}/${project}/envvar?circle-token=${apiToken}`,
-    {name: 'KEYSTORE', value: keystoreFiles.encodedKeystore},
-    {headers: {'Content-Type': 'application/json'}}
-  )
-
   print.info('Store keystore properties to secret variables')
-  await api.post(
-    `project/github/${org}/${project}/envvar?circle-token=${apiToken}`,
-    {name: 'KEYSTORE_PROPERTIES', value: keystoreFiles.keystoreProperties},
-    {headers: {'Content-Type': 'application/json'}}
-  )
+  circle.postEnvVariable({
+    org,
+    project,
+    apiToken,
+    key: 'KEYSTORE_PROPERTIES',
+    value: keystoreFiles.keystoreProperties
+  })
 
   if (jsonPath !== '' && jsonPath !== undefined) {
     print.info('Store Google Play JSON to secret variables')
     const encodedPlayStoreJSON = android.base64EncodeJson(jsonPath)
-    await api.post(
-      `project/github/${org}/${project}/envvar?circle-token=${apiToken}`,
-      {name: 'GOOGLE_PLAY_JSON', value: encodedPlayStoreJSON},
-      {headers: {'Content-Type': 'application/json'}}
-    )
+    circle.postEnvVariable({
+      org,
+      project,
+      apiToken,
+      key: 'GOOGLE_PLAY_JSON',
+      value: encodedPlayStoreJSON
+    })
   }
 }
 

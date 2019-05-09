@@ -106,6 +106,19 @@ def add_schemes(project_path)
   main_scheme.save_as(project_path, basename + "Staging", shared=true)
 end
 
+def get_team_id(team_type, account, password)
+  require 'spaceship'
+  if (team_type == 'itc')
+    Spaceship::Tunes.login(account, password)
+    team_id = Spaceship::Tunes.select_team  
+    team_id
+  elsif (team_type == 'dev')
+    Spaceship::Portal.login(account, password)
+    team_id = Spaceship::Portal.select_team      
+    team_id
+  end
+end
+
 def get_project_path()
   Dir["ios/*.xcodeproj"].select {|f| File.directory? f}.first
 end
@@ -125,6 +138,12 @@ elsif COMMAND == "add_bundle_id_suffixes"
   project.save
 elsif COMMAND == "get_project_path"
   get_project_path
+elsif COMMAND == "get_team_id"
+  team_type = ARGV[1]
+  account = ARGV[2]
+  password = ARGV[3]
+  team_id = get_team_id(team_type, account, password)
+  puts team_id
 end
 
 
