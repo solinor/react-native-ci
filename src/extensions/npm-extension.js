@@ -1,5 +1,3 @@
-// add your CLI-specific functionality here, which will then be accessible
-// to your commands
 const install = require('install-packages')
 
 module.exports = toolbox => {

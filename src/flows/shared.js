@@ -29,7 +29,7 @@ const askQuestions = async ({ prompt }, { defaults = {} }) => {
   return prompt.ask(questions)
 }
 
-const initCircleCI = async ({ template, prompt, print, http, android }, { org, project, apiToken, jsonPath }) => {
+const initCircleCI = async ({ template, prompt, print, http, android, circle }, { org, project, apiToken, jsonPath }) => {
   await template.generate({
     template: 'circleci/config.yml',
     target: '.circleci/config.yml',

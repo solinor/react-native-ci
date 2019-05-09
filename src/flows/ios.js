@@ -68,7 +68,7 @@ const initXcode = async ({ print: { spin }, template, npm, system, ios }, config
   spinner.succeed('react-native-schemes-manager installed..')
 }
 
-const initFastlane = async ({ ios, system, template, filesystem, http, prompt, print, print: { info, spin, success } }, config) => {
+const initFastlane = async ({ ios, system, template, filesystem, http, circle, prompt, print, print: { info, spin, success } }, config) => {
   const flSpinner = spin('Preparing Fastlane for iOS..')
   const fastlanePath = system.which('fastlane')
   if (!fastlanePath) {
@@ -143,21 +143,29 @@ const initFastlane = async ({ ios, system, template, filesystem, http, prompt, p
   await ios.matchSync({ certType: 'appstore', password: config.matchPassword })
   await ios.matchSync({ certType: 'development', password: config.matchPassword })
 
-  const api = http.create({
-    baseURL: 'https://circleci.com/api/v1.1/'
+  const { org, project, apiToken } = config
+  circle.postEnvVariable({
+    org,
+    project,
+    apiToken,
+    key: 'MATCH_PASSWORD',
+    value: config.matchPassword
   })
-  await api.post(
-    `project/github/${config.org}/${config.project}/envvar?circle-token=${config.apiToken}`,
-    {name: 'MATCH_PASSWORD', value: config.matchPassword},
-    {headers: {'Content-Type': 'application/json'}}
-  )
+
+  circle.postEnvVariable({
+    org,
+    project,
+    apiToken,
+    key: 'FASTLANE_PASSWORD',
+    value: config.developerPassword
+  })
 
   flSpinner.succeed('Fastlane ready for iOS')
   success(`${print.checkmark} Fastlane iOS setup success`)
 }
 
 
-const getInput = async ({ system, filesystem, prompt }, { defaults = {} }) => {
+const getInput = async ({ system, filesystem, prompt, ios, print }, { defaults = {} }) => {
   const xcodeProjectName = filesystem.find('ios/', {
     matching: '*.xcodeproj',
     directories: true,
@@ -166,25 +174,49 @@ const getInput = async ({ system, filesystem, prompt }, { defaults = {} }) => {
   })[0]
   const projectName = xcodeProjectName.split(/\/|\./)[1]
 
-  const askDeveloperAccount = {
-    type: 'input',
-    initial: defaults.appleDevAccount,
-    name: 'developerAccount',
-    message: 'Your Apple developer account?'
-  }
-  const askITunesTeamId = {
-    type: 'input',
-    initial: defaults.iTunesTeamId,
-    name: 'developerTeamId',
-    message: 'Your iTunes Team ID?'
-  }
+  const { developerAccount, developerPassword } = await prompt.ask([
+    {
+      type: 'input',
+      initial: defaults.appleDevAccount,
+      name: 'developerAccount',
+      message: 'Your Apple developer account?'
+    },
+    {
+      type: 'password',
+      name: 'developerPassword',
+      message: 'Your Apple developer password?'
+    },
+  ])
 
-  const askAppConnectTeamId = {
-    type: 'input',
-    initial: defaults.appConnectTeamId,
-    name: 'iTunesTeamId',
-    message: 'App Connect Team ID?'
+  let itcTeams = []
+  let devTeams = []
+  const teamSpinner = print.spin('Trying to find your Apple teams..')
+  try {
+    const teams = await ios.getTeamIds({
+      developerAccount,
+      developerPassword
+    })
+    itcTeams.push(...teams.itcTeams)
+    devTeams.push(...teams.devTeams)
+  } catch (error) {
+    teamSpinner.fail(error)
+    print.error('there was an error: ' + error)
+    process.exit(0)
   }
+  teamSpinner.succeed('Apple teams search successful')
+
+  const developerTeamId = await promptForTeamId(devTeams, {
+    message: 'Your Developer Team ID?',
+    multiMessage: 'Please select the developer team you want to use'
+  }, prompt)
+  
+  const iTunesTeamId = await promptForTeamId(itcTeams, {
+    message: 'Your App connect Team ID?',
+    multiMessage: 'Please select the app connect team you want to use'
+  }, prompt)
+
+//  print.info(`dev team id: ${developerTeamId}`)
+//  print.info(`app team id: ${iTunesTeamId}`)
 
   const askCertRepo = {
     type: 'input',
@@ -208,11 +240,37 @@ const getInput = async ({ system, filesystem, prompt }, { defaults = {} }) => {
   }
 
   // ask a series of questions
-  const questions = [askDeveloperAccount, askITunesTeamId, askAppConnectTeamId, askCertRepo, askAppId, askMatchPassword]
+  const questions = [askCertRepo, askAppId, askMatchPassword]
   const answers = await prompt.ask(questions)
   return {
     ...answers,
+    developerAccount,
+    developerPassword,
+    developerTeamId,
+    itunesTeamId,
     slackHook: '',
     projectName
+  }
+}
+
+const promptForTeamId = async (teams, { message, multiMessage }, prompt) => {
+  if (teams.length > 1) {
+    const { teamId } = await prompt.ask({
+      type: 'select',
+      name: 'teamId',
+      choices: teams.map((team) => `${team.name} (${team.id})`),
+      message: multiMessage
+    })
+    return teamId
+  } else if (teams.length === 1) {
+    return teams[0]
+  } else {
+    const { teamId } = await prompt.ask({
+      type: 'input',
+      initial: defaults.iTunesTeamId,
+      name: 'teamId',
+      message: message
+    })
+    return teamId
   }
 }
