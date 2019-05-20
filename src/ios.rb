@@ -119,6 +119,39 @@ def get_team_id(team_type, account, password)
   end
 end
 
+def resolve_variables(app_id, build_config) 
+  variables_in_string = /\$\((.*?)\)/
+  app_id = app_id.gsub(variables_in_string) do |m| 
+      sub = m[2..-2]
+      var, *transformations = sub.split(':')
+      resolved = build_config.resolve_build_setting(var)
+  
+#      puts "transformations #{transformations}"
+      transformations.each do |trans| 
+          { 
+              'lower' => resolved = resolved&.downcase, 
+              'rfc1034identifier' => resolved = resolved&.gsub(/[\/\*\s]/, '-')
+          } 
+      end
+#      puts "for variable #{sub} we resolved: #{resolved}"
+      recurred = resolve_variables(resolved, build_config)
+      recurred
+  end
+end
+
+def get_app_id(project)
+  proj_name = get_project_name()
+  bundle_id = Xcodeproj::Plist.read_from_path("ios/#{proj_name}/Info.plist")['CFBundleIdentifier']
+  target = project.targets[0]
+  build_config = target.build_configurations.select  {|config| config.name == 'Release'}.first
+  app_id = resolve_variables(bundle_id, build_config)
+  app_id
+end
+
+def get_project_name()
+  Dir["ios/*.xcodeproj"].select {|f| File.directory? f}.first.split(/(\/|\.)/)[2]
+end
+  
 def get_project_path()
   Dir["ios/*.xcodeproj"].select {|f| File.directory? f}.first
 end
@@ -144,6 +177,9 @@ elsif COMMAND == "get_team_id"
   password = ARGV[3]
   team_id = get_team_id(team_type, account, password)
   puts team_id
+elsif COMMAND == "get_app_id"
+  app_id = get_app_id(project)
+  puts app_id
 end
 
 

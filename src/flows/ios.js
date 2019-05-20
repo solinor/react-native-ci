@@ -251,6 +251,7 @@ const getInput = async (
    print.info(`dev team id: ${developerTeamId}`)
    print.info(`app team id: ${iTunesTeamId}`)
 
+
   const askCertRepo = {
     type: 'input',
     initial: defaults.certRepoUrl,
@@ -258,11 +259,17 @@ const getInput = async (
     message: 'Specify path to iOS Signing key repo'
   }
 
+  const appId = await ios.getAppId()
+  const isValidAppId = await prompt.confirm( 
+    `We resolved Bundle ID for your project: ${appId}, is this correct?`
+  )
+
   const askAppId = {
     type: 'input',
     initial: defaults.appId,
     name: 'appId',
-    message: 'What is your app bundle id?'
+    skip: isValidAppId,
+    message: 'What is your project Bundle ID?'
   }
 
   const askMatchPassword = {
@@ -273,9 +280,11 @@ const getInput = async (
   }
 
   // ask a series of questions
-  const questions = [askCertRepo, askAppId, askMatchPassword]
+  const questions = [askAppId, askCertRepo, askMatchPassword]
+
   const answers = await prompt.ask(questions)
   return {
+    appId,
     ...answers,
     developerAccount,
     developerPassword,
