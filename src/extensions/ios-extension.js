@@ -76,6 +76,15 @@ module.exports = toolbox => {
           reject(e)
         }
       })
+    },
+    getAppId: async () => {
+      const { print, system, meta } = toolbox
+      return new Promise((resolve, reject) => {
+        const appId = system.run(
+          `ruby ${meta.src}/ios.rb get_app_id`
+        , { trim: true })
+        resolve(appId)
+      })
     }
   }
 }
