@@ -8,10 +8,26 @@ module.exports = {
     const { runIOS } = require('../flows/ios')
 
     const { print: { info } } = toolbox
-    info(process.cwd())
-    const defaultConfig = toolbox.config.loadConfig('react-native-ci', process.cwd())
-    const sharedConfig = await runShared(toolbox, defaultConfig)
-    await runAndroid(toolbox, { ...defaultConfig, ...sharedConfig })
-    await runIOS(toolbox, { ...defaultConfig, ...sharedConfig })
+    let { ci, android, ios } = toolbox.parameters.options
+    if (!ci && !android && !ios) {
+      ci = true
+      android = true
+      ios = true
+    }
+    const { defaults } = toolbox.config.loadConfig('react-native-ci', process.cwd())
+    const defaultConfig = {
+      ...defaults,
+      ...toolbox.parameters.options
+    }
+    let sharedConfig = {}
+    if (ci) {
+      sharedConfig = await runShared(toolbox, defaultConfig)
+    }
+    if (android) {
+      await runAndroid(toolbox, { ...defaultConfig, ...sharedConfig })
+    }
+    if (ios) {
+      await runIOS(toolbox, { ...defaultConfig, ...sharedConfig })
+    }
   }
 }

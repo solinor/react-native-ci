@@ -39,12 +39,25 @@ Run command in your project root:
 react-native-ci init
 ```
 
-Provide the required information when prompted. Optionally you can define config file, which includes
-default values to the questions. This is useful when you test command multiple times and don't want
+Provide the required information when prompted. Optionally you can give input as command line parameters
+or define config file. This is useful when you test command multiple times and don't want
 to have to input all the values manually each time. Especially useful when developing and testing
 react-native-ci itself!
 
-Example config file: (react-native-ci.config.js)
+### Command-line options: 
+
+`--ci` - will initialize CI integration
+
+`--android` will initialize Android integration
+
+`--ios` will initialize iOS integartion.
+
+If none are provided, defaults to running all the ingerations.
+
+You can also provide all the values that are configurable in the config file as command line arguments.
+So `--appleDevAccount dev@company.com` to set your Apple dev account for example.
+
+### Example config file: (react-native-ci.config.js)
 
 ```
 module.exports = {

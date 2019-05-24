@@ -1,35 +1,42 @@
 module.exports.runShared = async (toolbox, config) =>  {
   const answers = await askQuestions(toolbox, config)
-  await initCircleCI(toolbox, config)
+  await initCircleCI(toolbox, { ...config, ...answers })
   return answers
 }
 
-const askQuestions = async ({ prompt }, { defaults = {} }) => {
+const askQuestions = async ({ prompt }, options) => {
   // text input
   const askOrganization = {
     type: 'input',
-    initial: defaults.githubOrg,
-    name: 'org',
+    initial: options.githubOrg,
+    skip: () => options.githubOrg,
+    name: 'githubOrg',
     message: 'Your github organization?'
   }
   const askProject = {
     type: 'input',
-    initial: defaults.repo,
-    name: 'project',
+    initial: options.repo,
+    skip: () => options.repo,
+    name: 'repo',
     message: 'Your github project name?'
   }
   const askApiToken = {
     type: 'input',
-    initial: defaults.circleApi,
-    name: 'apiToken',
+    initial: options.circleApi,
+    skip: () => options.circleApi,
+    name: 'circleApi',
     message: 'Your CircleCI API token?'
   }
   // ask a series of questions
   const questions = [askOrganization, askProject, askApiToken]
-  return prompt.ask(questions)
+  const answers = prompt.ask(questions)
+  return {
+    ...options,
+    ...answers
+  }
 }
 
-const initCircleCI = async ({ template, prompt, print, http, android, circle }, { org, project, apiToken, jsonPath }) => {
+const initCircleCI = async ({ template, prompt, print, http, android, circle }, { githubOrg, repo, circleApi }) => {
   await template.generate({
     template: 'circleci/config.yml',
     target: '.circleci/config.yml',
@@ -41,7 +48,7 @@ const initCircleCI = async ({ template, prompt, print, http, android, circle }, 
   })
 
   const { status } = await api.post(
-    `project/github/${org}/${project}/follow?circle-token=${apiToken}`
+    `project/github/${githubOrg}/${repo}/follow?circle-token=${circleApi}`
   )
 
 }

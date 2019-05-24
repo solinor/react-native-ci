@@ -85,7 +85,7 @@ const initFastlane = async (
     print,
     print: { info, spin, success }
   },
-  config
+  options
 ) => {
   const flSpinner = spin('Preparing Fastlane for iOS..')
   const fastlanePath = system.which('fastlane')
@@ -103,20 +103,20 @@ const initFastlane = async (
     template: 'fastlane/ios/Appfile',
     target: 'ios/fastlane/Appfile',
     props: {
-      ...config
+      ...options
     }
   })
 
   flSpinner.start()
 
-  const { appId } = config
+  const { appId } = options
 
   await template.generate({
     template: 'fastlane/ios/Matchfile',
     target: 'ios/fastlane/Matchfile',
     props: {
-      ...config,
-      developerAccount: config.developerAccount,
+      ...options,
+      developerAccount: options.developerAccount,
       appIds: `["${appId}", "${appId}.dev", "${appId}.staging"]`
     }
   })
@@ -131,48 +131,48 @@ const initFastlane = async (
     template: 'fastlane/ios/Fastfile',
     target: 'ios/fastlane/Fastfile',
     props: {
-      projectName: config.projectName,
-      appId: config.appId,
-      slackHook: config.slackHook
+      projectName: options.projectName,
+      appId: options.appId,
+      slackHook: options.slackHook
     }
   })
 
-  await system.run(`fastlane fastlane-credentials add --username ${config.developerAccount} --password ${config.developerPassword}`)
+  await system.run(`fastlane fastlane-credentials add --username ${options.developerAccount} --password ${options.developerPassword}`)
 
   await ios.produceApp({
     appId,
-    devId: config.developerAccount,
-    appName: config.projectName,
-    developerTeamId: config.developerTeamId,
-    iTunesTeamId: config.iTunesTeamId
+    devId: options.developerAccount,
+    appName: options.projectName,
+    developerTeamId: options.developerTeamId,
+    iTunesTeamId: options.iTunesTeamId
   })
   await ios.produceApp({
     appId: `${appId}.dev`,
-    devId: config.developerAccount,
-    appName: `${config.projectName} Dev`,
-    developerTeamId: config.developerTeamId,
-    iTunesTeamId: config.iTunesTeamId
+    devId: options.developerAccount,
+    appName: `${options.projectName} Dev`,
+    developerTeamId: options.developerTeamId,
+    iTunesTeamId: options.iTunesTeamId
   })
   await ios.produceApp({
     appId: `${appId}.staging`,
-    devId: config.developerAccount,
-    appName: `${config.projectName} Staging`,
-    developerTeamId: config.developerTeamId,
-    iTunesTeamId: config.iTunesTeamId
+    devId: options.developerAccount,
+    appName: `${options.projectName} Staging`,
+    developerTeamId: options.developerTeamId,
+    iTunesTeamId: options.iTunesTeamId
   })
-  await ios.matchSync({ certType: 'appstore', password: config.matchPassword })
+  await ios.matchSync({ certType: 'appstore', password: options.matchPassword })
   await ios.matchSync({
     certType: 'development',
-    password: config.matchPassword
+    password: options.matchPassword
   })
 
-  const { org, project, apiToken } = config
+  const { org, project, apiToken } = options
   circle.postEnvVariable({
     org,
     project,
     apiToken,
     key: 'MATCH_PASSWORD',
-    value: config.matchPassword
+    value: options.matchPassword
   })
 
   circle.postEnvVariable({
@@ -180,7 +180,7 @@ const initFastlane = async (
     project,
     apiToken,
     key: 'FASTLANE_PASSWORD',
-    value: config.developerPassword
+    value: options.developerPassword
   })
 
   flSpinner.succeed('Fastlane ready for iOS')
@@ -189,7 +189,7 @@ const initFastlane = async (
 
 const getInput = async (
   { system, filesystem, prompt, ios, print },
-  { defaults = {} }
+  options
 ) => {
   const xcodeProjectName = filesystem.find('ios/', {
     matching: '*.xcodeproj',
@@ -199,63 +199,74 @@ const getInput = async (
   })[0]
   const projectName = xcodeProjectName.split(/\/|\./)[1]
 
-  const { developerAccount, developerPassword } = await prompt.ask([
+  const devAnswers = await prompt.ask([
     {
       type: 'input',
-      initial: defaults.appleDevAccount,
+      initial: options.appleDevAccount,
+      skip: () => options.appleDevAccount,
       name: 'developerAccount',
       message: 'Your Apple developer account?'
     },
     {
       type: 'password',
       name: 'developerPassword',
+      skip: () => options.appleDevPassword,
       message: 'Your Apple developer password?'
     }
   ])
+  const { developerAccount, developerPassword } = {
+    developerAccount: devAnswers.developerAccount ? devAnswers.developerAccount : options.developerAccount,
+    developerPassword: devAnswers.developerPassword ? devAnswers.developerPassword : options.developerPassword
+  } 
 
-  let itcTeams = []
-  let devTeams = []
-  const teamSpinner = print.spin('Trying to find your Apple teams..')
-  try {
-    const teams = await ios.getTeamIds({
-      developerAccount,
-      developerPassword
-    })
-    itcTeams.push(...teams.itcTeams)
-    devTeams.push(...teams.devTeams)
-  } catch (error) {
-    teamSpinner.fail(error)
-    print.error('there was an error: ' + error)
-    process.exit(0)
+  let developerTeamId = options.iTunesTeamId;
+  let iTunesTeamId = options.appConnectTeamId;
+  if (!developerTeamId || !iTunesTeamId) {
+    let itcTeams = []
+    let devTeams = []
+    const teamSpinner = print.spin('Trying to find your Apple teams..')
+    try {
+      const teams = await ios.getTeamIds({
+        developerAccount,
+        developerPassword
+      })
+      itcTeams.push(...teams.itcTeams)
+      devTeams.push(...teams.devTeams)
+    } catch (error) {
+      teamSpinner.fail(error)
+      print.error('there was an error: ' + error)
+      process.exit(0)
+    }
+    teamSpinner.succeed('Apple teams search successful')
+  
+    developerTeamId = await promptForTeamId(
+      devTeams,
+      {
+        message: 'Your Developer Team ID?',
+        multiMessage: 'Please select the developer team you want to use'
+      },
+      prompt
+    )
+  
+    iTunesTeamId = await promptForTeamId(
+      itcTeams,
+      {
+        message: 'Your App connect Team ID?',
+        multiMessage: 'Please select the app connect team you want to use'
+      },
+      prompt
+    )  
   }
-  teamSpinner.succeed('Apple teams search successful')
 
-  const developerTeamId = await promptForTeamId(
-    devTeams,
-    {
-      message: 'Your Developer Team ID?',
-      multiMessage: 'Please select the developer team you want to use'
-    },
-    prompt
-  )
-
-  const iTunesTeamId = await promptForTeamId(
-    itcTeams,
-    {
-      message: 'Your App connect Team ID?',
-      multiMessage: 'Please select the app connect team you want to use'
-    },
-    prompt
-  )
-
-   print.info(`dev team id: ${developerTeamId}`)
-   print.info(`app team id: ${iTunesTeamId}`)
+  //  print.info(`dev team id: ${developerTeamId}`)
+  //  print.info(`app team id: ${iTunesTeamId}`)
 
 
   const askCertRepo = {
     type: 'input',
-    initial: defaults.certRepoUrl,
-    name: 'certRepo',
+    initial: options.certRepoUrl,
+    skip: () => options.certRepoUrl,
+    name: 'certRepoUrl',
     message: 'Specify path to iOS Signing key repo'
   }
 
@@ -266,7 +277,6 @@ const getInput = async (
 
   const askAppId = {
     type: 'input',
-    initial: defaults.appId,
     name: 'appId',
     skip: isValidAppId,
     message: 'What is your project Bundle ID?'
@@ -274,7 +284,8 @@ const getInput = async (
 
   const askMatchPassword = {
     type: 'input',
-    initial: defaults.matchPassword,
+    initial: options.matchPassword,
+    skip: () => options.matchPassword,
     name: 'matchPassword',
     message: 'What do you want to be your match repo password?'
   }
@@ -284,8 +295,10 @@ const getInput = async (
 
   const answers = await prompt.ask(questions)
   return {
-    appId,
     ...answers,
+    appId,
+    certRepoUrl: options.certRepoUrl,
+    matchPassword: options.matchPassword,
     developerAccount,
     developerPassword,
     developerTeamId,
@@ -314,7 +327,7 @@ const promptForTeamId = async (teams, { message, multiMessage }, prompt) => {
   } else {
     const { teamId } = await prompt.ask({
       type: 'input',
-      initial: defaults.iTunesTeamId,
+      initial: options.iTunesTeamId,
       name: 'teamId',
       message: message
     })
