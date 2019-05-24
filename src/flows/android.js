@@ -4,22 +4,28 @@ module.exports.runAndroid = async (toolbox, config) => {
   await setupGradle(toolbox, config)
 }
 
-const askQuestion = async (prompt, defaults = {}) => {
+const askQuestion = async (prompt, options) => {
   const askGooglePlayJSONPath = {
     type: 'input',
-    initial: defaults.googleJsonPatch,
-    name: 'jsonPath',
+    initial: options.googleJsonPath,
+    skip: () => options.googleJsonPath,
+    name: 'googleJsonPath',
     message: 'Path to Google Play Store JSON?'
   }
-  return prompt.ask(askGooglePlayJSONPath)
+  const { googleJsonPath } = await prompt.ask(askGooglePlayJSONPath)
+  return {
+    googleJsonPath: options.googleJsonPath,
+    googleJsonPath
+  }
 }
 
-const initAndroid = async ({ android, http, prompt, print, circle }, { project, org, apiToken, defaults }) => {
+const initAndroid = async ({ android, http, prompt, print, circle }, options) => {
 
-  const { jsonPath } = await askQuestion(prompt, defaults)
+  const { githubOrg, repo, circleApi } = options
+  const { googleJsonPath } = await askQuestion(prompt, options)
 
   const keystoreFiles = await android.createKeystore({
-    name: project,
+    name: repo,
     storePassword: '123456',
     alias: 'circleci',
     aliasPassword: '123456'
@@ -27,29 +33,29 @@ const initAndroid = async ({ android, http, prompt, print, circle }, { project,
 
   print.info('Store keystore to secret variables')
   circle.postEnvVariable({
-    org,
-    project,
-    apiToken,
+    githubOrg,
+    repo,
+    circleApi,
     key: 'KEYSTORE',
     value: keystoreFiles.encodedKeystore
   })
 
   print.info('Store keystore properties to secret variables')
   circle.postEnvVariable({
-    org,
-    project,
-    apiToken,
+    githubOrg,
+    repo,
+    circleApi,
     key: 'KEYSTORE_PROPERTIES',
     value: keystoreFiles.keystoreProperties
   })
 
-  if (jsonPath !== '' && jsonPath !== undefined) {
+  if (googleJsonPath !== '' && googleJsonPath !== undefined) {
     print.info('Store Google Play JSON to secret variables')
-    const encodedPlayStoreJSON = android.base64EncodeJson(jsonPath)
+    const encodedPlayStoreJSON = android.base64EncodeJson(googleJsonPath)
     circle.postEnvVariable({
-      org,
-      project,
-      apiToken,
+      githubOrg,
+      repo,
+      circleApi,
       key: 'GOOGLE_PLAY_JSON',
       value: encodedPlayStoreJSON
     })
@@ -90,7 +96,7 @@ const initFastlane = async ({ system, android, template, filesystem, print }) =>
   })
 }
 
-const setupGradle = async ({ android, patching }, { project }) => {
+const setupGradle = async ({ android, patching }, { repo }) => {
   const GRADLE_FILE_PATH = 'android/app/build.gradle'
   await patching.replace(
     GRADLE_FILE_PATH,
@@ -99,7 +105,7 @@ const setupGradle = async ({ android, patching }, { project }) => {
   )
 
   const keyStoreProperties =
-    `def keystorePropertiesFile = rootProject.file("app/${project}-keystore.properties")
+    `def keystorePropertiesFile = rootProject.file("app/${repo}-keystore.properties")
 def keystoreProperties = new Properties()
 keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
@@ -141,7 +147,7 @@ keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
     }
   )
 
-  const propsPrefix = project.toUpperCase()
+  const propsPrefix = repo.toUpperCase()
   const signingConfigs =
     `signingConfigs {
         release {
