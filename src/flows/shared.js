@@ -11,7 +11,10 @@ const askQuestions = async ({ prompt }, options) => {
     initial: options.githubOrg,
     skip: () => options.githubOrg,
     name: 'githubOrg',
-    message: 'Your github organization?'
+    message: 'Your github organization?',
+    validate(value = '') {
+      return value === '' ? `Your github organization can't be empty` : true
+    },
   }
   const askProject = {
     type: 'input',
