@@ -29,7 +29,7 @@ const askQuestions = async ({ prompt }, options) => {
   }
   // ask a series of questions
   const questions = [askOrganization, askProject, askApiToken]
-  const answers = prompt.ask(questions)
+  const answers = await prompt.ask(questions)
   return {
     ...options,
     ...answers
