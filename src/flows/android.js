@@ -41,8 +41,7 @@ const askQuestions = async (prompt, options) => {
 const initAndroid = async ({ android, http, prompt, print, circle }, options) => {
 
   const { githubOrg, repo, circleApi } = options
-  const answers  = await askQuestions(prompt, options)
-  const { googleJsonPath, storePassword, aliasPassword, alias } = answers
+  const { googleJsonPath, storePassword, aliasPassword, alias }  = await askQuestions(prompt, options)
   const keystoreFiles = await android.createKeystore({
     name: repo,
     storePassword: storePassword,
