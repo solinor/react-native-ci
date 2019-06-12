@@ -4,7 +4,7 @@ module.exports.runAndroid = async (toolbox, config) => {
   await setupGradle(toolbox, config)
 }
 
-const askQuestion = async (prompt, options) => {
+const askQuestions = async (prompt, options) => {
   const askGooglePlayJSONPath = {
     type: 'input',
     initial: options.googleJsonPath,
@@ -12,23 +12,42 @@ const askQuestion = async (prompt, options) => {
     name: 'googleJsonPath',
     message: 'Path to Google Play Store JSON?'
   }
-  const { googleJsonPath } = await prompt.ask(askGooglePlayJSONPath)
-  return {
-    googleJsonPath: options.googleJsonPath,
-    googleJsonPath
+  const askStorePassword = {
+    type: 'password',
+    initial: options.storePassword,
+    skip: () => options.storePassword,
+    name: 'storePassword',
+    message: 'Keystore password?'
   }
+  const askAlias = {
+    type: 'input',
+    initial: options.alias,
+    skip: () => options.alias,
+    name: 'alias',
+    message: 'Keystore alias?'
+  }
+  const askAliasPassword = {
+    type: 'password',
+    initial: options.aliasPassword,
+    skip: () => options.aliasPassword,
+    name: 'aliasPassword',
+    message: 'Keystore alias password?'
+  }
+
+  const answers = prompt.ask([askGooglePlayJSONPath, askAlias, askStorePassword, askAliasPassword])
+  return answers
 }
 
 const initAndroid = async ({ android, http, prompt, print, circle }, options) => {
 
   const { githubOrg, repo, circleApi } = options
-  const { googleJsonPath } = await askQuestion(prompt, options)
-
+  const answers  = await askQuestions(prompt, options)
+  const { googleJsonPath, storePassword, aliasPassword, alias } = answers
   const keystoreFiles = await android.createKeystore({
     name: repo,
-    storePassword: '123456',
-    alias: 'circleci',
-    aliasPassword: '123456'
+    storePassword: storePassword,
+    alias: alias,
+    aliasPassword: aliasPassword
   })
 
   print.info('Store keystore to secret variables')
