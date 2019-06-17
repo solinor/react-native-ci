@@ -12,60 +12,49 @@ const askQuestions = async (prompt, options) => {
     name: 'googleJsonPath',
     message: 'Path to Google Play Store JSON?'
   }
-  const askStorePassword = {
+  const askKeystoreAskCreate = {
+    type: 'confirm',
+    name: 'keystoreAnswer',
+    message: 'Do you want to create a keystore.properties file?'
+  }
+  const answers = prompt.ask([askGooglePlayJSONPath, askKeystoreAskCreate])
+  return answers
+}
+
+const askKeystoreQuestions = async (prompt, options) => {
+   const  askKeystorePassword = {
     type: 'password',
-    initial: options.storePassword,
-    skip: () => options.storePassword,
-    name: 'storePassword',
+    initial: options.keystorePassword,
+    skip: () => options.keystorePassword,
+    name: 'keystorePassword',
     message: 'Keystore password?'
   }
-  const askAlias = {
+  const askKeystoreAlias = {
     type: 'input',
-    initial: options.alias,
-    skip: () => options.alias,
-    name: 'alias',
+    initial: options.keystoreAlias,
+    skip: () => options.keystoreAlias,
+    name: 'keystoreAlias',
     message: 'Keystore alias?'
   }
-  const askAliasPassword = {
+  const askKeystoreAliasPassword = {
     type: 'password',
-    initial: options.aliasPassword,
-    skip: () => options.aliasPassword,
-    name: 'aliasPassword',
+    initial: options.keystoreAliasPassword,
+    skip: () => options.keystoreAliasPassword,
+    name: 'keystoreAliasPassword',
     message: 'Keystore alias password?'
   }
 
-  const answers = prompt.ask([askGooglePlayJSONPath, askAlias, askStorePassword, askAliasPassword])
+  const answers = prompt.ask([askKeystorePassword, askKeystoreAlias, askKeystoreAliasPassword])
   return answers
 }
 
 const initAndroid = async ({ android, http, prompt, print, circle }, options) => {
 
   const { githubOrg, repo, circleApi } = options
-  const { googleJsonPath, storePassword, aliasPassword, alias }  = await askQuestions(prompt, options)
-  const keystoreFiles = await android.createKeystore({
-    name: repo,
-    storePassword: storePassword,
-    alias: alias,
-    aliasPassword: aliasPassword
-  })
-
-  print.info('Store keystore to secret variables')
-  circle.postEnvVariable({
-    githubOrg,
-    repo,
-    circleApi,
-    key: 'KEYSTORE',
-    value: keystoreFiles.encodedKeystore
-  })
-
-  print.info('Store keystore properties to secret variables')
-  circle.postEnvVariable({
-    githubOrg,
-    repo,
-    circleApi,
-    key: 'KEYSTORE_PROPERTIES',
-    value: keystoreFiles.keystoreProperties
-  })
+  const { googleJsonPath, keystoreAnswer}  = await askQuestions(prompt, options)
+  if (keystoreAnswer){
+    await createKeystoreFile(android, prompt, print, circle, options)
+  }
 
   if (googleJsonPath !== '' && googleJsonPath !== undefined) {
     print.info('Store Google Play JSON to secret variables')
@@ -194,4 +183,33 @@ keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
       after: releaseType
     }
   )
+}
+
+const createKeystoreFile = async (android, prompt, print, circle, options) => {
+  const { githubOrg, repo, circleApi } = options
+  const { keystoreAlias, keystorePassword , keystoreAliasPassword }  = await askKeystoreQuestions(prompt, options)
+  const keystoreFiles = await android.createKeystore({
+    name: repo,
+    storePassword: keystorePassword,
+    alias: keystoreAlias,
+    aliasPassword: keystoreAliasPassword
+  })
+  
+  print.info('Store keystore to secret variables')
+  circle.postEnvVariable({
+    githubOrg,
+    repo,
+    circleApi,
+    key: 'KEYSTORE',
+    value: keystoreFiles.encodedKeystore
+  })
+  
+  print.info('Store keystore properties to secret variables')
+  circle.postEnvVariable({
+    githubOrg,
+    repo,
+    circleApi,
+    key: 'KEYSTORE_PROPERTIES',
+    value: keystoreFiles.keystoreProperties
+  })
 }
