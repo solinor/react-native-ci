@@ -1,6 +1,6 @@
 {
   "name": "react-native-ci",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "react-native-ci CLI",
   "bin": {
     "react-native-ci": "bin/react-native-ci"
