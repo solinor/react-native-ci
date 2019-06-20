@@ -4,7 +4,7 @@ module.exports.runAndroid = async (toolbox, config) => {
   await setupGradle(toolbox, config)
 }
 
-const askQuestions = async (prompt, options) => {
+const askQuestions = async (prompt, options, android) => {
   const askGooglePlayJSONPath = {
     type: 'input',
     initial: options.googleJsonPath,
@@ -12,12 +12,14 @@ const askQuestions = async (prompt, options) => {
     name: 'googleJsonPath',
     message: 'Path to Google Play Store JSON?'
   }
-  const askKeystoreAskCreate = {
+  const hasReleaseConfig = android.getConfigSection(['signingConfigs', 'release']) ? true : false
+  const askKeystoreCreate = {
     type: 'confirm',
-    name: 'keystoreAnswer',
+    initial: !hasReleaseConfig,
+    name: 'canCreateKeystore',
     message: 'Do you want to create a keystore.properties file?'
   }
-  const answers = prompt.ask([askGooglePlayJSONPath, askKeystoreAskCreate])
+  const answers = prompt.ask([askGooglePlayJSONPath, askKeystoreCreate])
   return answers
 }
 
@@ -48,11 +50,11 @@ const askKeystoreQuestions = async (prompt, options) => {
   return answers
 }
 
-const initAndroid = async ({ android, http, prompt, print, circle }, options) => {
+const initAndroid = async ({ android, http, prompt, print, circle, patching}, options) => {
 
   const { githubOrg, repo, circleApi } = options
-  const { googleJsonPath, keystoreAnswer}  = await askQuestions(prompt, options)
-  if (keystoreAnswer){
+  const { googleJsonPath, canCreateKeystore}  = await askQuestions(prompt, options, android)
+  if (canCreateKeystore){
     await createKeystoreFile(android, prompt, print, circle, options)
   }
 
