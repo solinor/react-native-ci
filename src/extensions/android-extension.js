@@ -1,4 +1,5 @@
 const fs = require('fs')
+const { getConfigSection } = require('../android/androidHelper')
 
 // add your CLI-specific functionality here, which will then be accessible
 // to your commands
@@ -24,32 +25,20 @@ module.exports = toolbox => {
       })
       return applicationId
     },
-    getConfigSection: (sectionName) => {
+    getBuildGradle: () => {
       const {
         filesystem,
       } = toolbox
 
       const gradle = filesystem.read('android/app/build.gradle')
-      const lines = gradle.split('\n')
-      let isInSection = false
-      let brackets = 0
-      let sectionStr = ''
-      lines.forEach((line) => {
-        const buildType = line.includes(sectionName)
-        if (buildType) {
-          isInSection = true
-        }
-        if (isInSection) {
-          sectionStr += line + '\n'
-          const openings = (line.match(new RegExp('{', 'g')) || []).length
-          const closings = (line.match(new RegExp('}', 'g')) || []).length
-          brackets = brackets + openings - closings
-        }
-        if (isInSection && brackets <= 0) {
-          isInSection = false
-        }
-      })
-      return sectionStr
+      return gradle
+    },
+    getConfigSection: (section) => {
+      const {
+        filesystem,
+      } = toolbox
+      const file = filesystem.read('android/app/build.gradle')
+      return getConfigSection(file, section)
     },
     isLibraryLinked: (libraryName) => {
       const {
