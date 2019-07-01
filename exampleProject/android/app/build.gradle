@@ -93,16 +93,6 @@ def enableSeparateBuildPerCPUArchitecture = false
  */
 def enableProguardInReleaseBuilds = false
 
-def keystorePropertyFile = rootProject.file("app/internalCiProject-keystore.properties")
-def keystoreProperties = new Properties()
-keystoreProperties.load(new FileInputStream(keystorePropertyFile))
-
-def Properties localProps = new Properties()
-localProps.load(new FileInputStream(file('../local.properties')))
-def Properties keyProps = new Properties()
-keyProps.load(new FileInputStream(file(localProps['keystore.props.file'])))
-
-
 android {
     compileSdkVersion rootProject.ext.compileSdkVersion
 
@@ -115,7 +105,7 @@ android {
         applicationId "com.ciproject"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode rootProject.hasProperty("VERSION_CODE") ? VERSION_CODE.toInteger() : 1
+        versionCode 1
         versionName "1.0"
     }
     splits {
@@ -126,35 +116,18 @@ android {
             include "armeabi-v7a", "x86", "arm64-v8a", "x86_64"
         }
     }
-    flavorDimensions "env"
-    productFlavors {
-        dev {
-            dimension "env"
-            applicationIdSuffix ".dev"
-            versionNameSuffix "-DEV"
-        }
-        staging {
-            dimension "env"
-            applicationIdSuffix ".staging"
-            versionNameSuffix "-STAGING"
-        }
-        prod {
-            dimension "env"
-        }
-    }
-   
+
     signingConfigs {
         release {
-            keyAlias keystoreProperties['INTERNALCIPROJECT_RELEASE_KEY_ALIAS']
-            keyPassword keystoreProperties['INTERNALCIPROJECT_RELEASE_KEY_PASSWORD']
-            storeFile file(keystoreProperties['INTERNALCIPROJECT_RELEASE_STORE_FILE'])
-            storePassword keystoreProperties['INTERNALCIPROJECT_RELEASE_STORE_PASSWORD']
+            storeFile file(STORE_FILE)
+            storePassword STORE_PASSWORD
+            keyAlias KEY_ALIAS
+            keyPassword KEY_PASSWORD
         }
     }
-
+    
     buildTypes {
         release {
-			signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }

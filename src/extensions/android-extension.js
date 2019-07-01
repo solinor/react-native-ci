@@ -1,5 +1,5 @@
 const fs = require('fs')
-const { getConfigSection } = require('../android/androidHelper')
+const { getConfigSection, createKeystore } = require('../android/androidHelper')
 
 // add your CLI-specific functionality here, which will then be accessible
 // to your commands
@@ -56,18 +56,18 @@ module.exports = toolbox => {
       })
       return isLinked
     },
-    createKeystore: async (options) => {
+    getKeystore: async (options) => {
       const {
         system,
         template,
         print
       } = toolbox
 
-      const { name, storePassword, alias, aliasPassword } = options
-      const storeFile = `${name}-key.keystore`
-
-      print.info('Checking if CircleCI keystore already exists.')
-      const checkKeyStore = `keytool -v -list -keystore android/app/${storeFile} -storepass ${storePassword} -alias ${alias}`
+      const { name, storePassword, alias, aliasPassword, keystoreFile} = options
+      const storeFile = keystoreFile != '' ? keystoreFile : `android/app/${name}-key.keystore`
+      // const storeFile = `${name}-key.keystore`
+      print.info('Checking if CircleCI keystore already exists')
+      const checkKeyStore = `keytool -v -list -keystore ${storeFile} -storepass ${storePassword} -alias ${alias}`
       let keystore
       try {
         keystore = await system.run(checkKeyStore)
@@ -78,17 +78,13 @@ module.exports = toolbox => {
 
       let encodedKeystore
       if (!keystore) {
-        print.info('Generate new cert.')
-        const command = `keytool -genkey -v -keystore android/app/${storeFile} -storepass ${storePassword} -alias ${alias} -keypass ${aliasPassword} -dname 'cn=Unknown, ou=Unknown, o=Unknown, c=Unknown' -keyalg RSA -keysize 2048 -validity 10000`
-        await system.run(command)
-        const encodeCommand = `openssl base64 -A -in android/app/${storeFile}`
-        encodedKeystore = await system.run(encodeCommand)
+        encodedKeystore = createKeystore(options)
       }
 
       const keystoreProperties = await template.generate({
         template: 'keystore.properties',
         target: `android/app/${name}-keystore.properties`,
-        props: { ...options, storeFile, name: name.toUpperCase() }
+        props: { ...options, keystore, name: name.toUpperCase() }
       })
 
       return {
