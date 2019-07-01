@@ -1,9 +1,55 @@
 
-const { filesystem} = require('gluegun/filesystem')
-const { print } = require('gluegun/print')
-const { system } = require('gluegun/system')
+const { filesystem, print, system } = require('gluegun')
+const { 
+  eq,
+	notMatch,
+	match,
+	includes,
+	map,
+  filter,
+  replace,
+  find,
+  curry,
+  compose
+  } = require('../utils/functional')
 
+const collateBy = f => g => xs => {
+  return xs.reduce((m,x) => {
+    let v = f(x)
+    return m.set(v, g(m.get(v), x))
+  }, new Map())
+}
+const regexBuilder = (property, operator, prefix, postfix, patternArray) => {
+  let builded = ''
+  if (patternArray === ''){
+    builded =  property + operator
+  }else{
+    builded = patternArray.reduce((total, pattern, index, array) => {
+      if (index === 0){
+        total =  property + pattern
+      } else {
+        total = total + operator  + property  + pattern
+      }
+      if (index == array.length - 1){
+        total = total 
+      }
+      return total
+    },'')
+  }
+  builded = prefix + builded + postfix
+  return  builded
+}
+
+const linesToSearch = curry((lines, x) => lines.find(x))
+const splitNewLine = text =>  text.trim().split('\n')
+const replaceQuotes = replace(/'|"/g)
+const replaceQuotesBlank = replaceQuotes('')
+const closureOrBuilder = (pattern) => regexBuilder('', '|','(',')', pattern)
+const childBuilder = (properties) => properties.map(property => regexBuilder(property, '|','','', ['.*load', '.*file']))
+const firstWord = string => string.trim().split(' ')[0]
+const replaceDotSlash =  replace(/\.\//g)
 const getConfigSection = (text, section) => {
+  console.log('text', text)
   sectionArr = Array.isArray(section) ? section : [section] 
   let sectionToFind = sectionArr[0]
   let sectionStr = ''
@@ -17,43 +63,48 @@ const getConfigSection = (text, section) => {
 }
 
 const getFirstAZWordFromSection = section => {
-  const lines = section.trim().split('\n')
   const builder= regexBuilder('', '|','(',')', ['{','}'])
-  const regex = new RegExp(builder)
-  const notMatch = curry((what, s) => !s.match(what));
-  const noBrackets = notMatch(builder); // x => x.match(/r/g)
-  const filtered = (lines) => lines.filter(noBrackets)
-  const filteredSection = filtered(lines)
-  const variables = filteredSection.map(firstWord)
-  return variables
+  const noBrackets = notMatch(builder)
+  const noBracketsFilter = filter(noBrackets)
+  const fistWords = map(firstWord)
+  const findWords = compose(fistWords,noBracketsFilter,splitNewLine) 
+  const words = findWords(section)
+  return words
 } 
 
-const getVariableValue = (text, variable) => {
-  const lines = text.split('\n')
-  const matchLine = lines.find((line) => {
-    return line.match(new RegExp(variable +'.* '))
-  })
-  const values =  matchLine && matchLine.length > 0 ? matchLine.split(' ') : []
+const getValueFromProperty = (text, variable) => {
+  const regex = new RegExp(variable +'.* ')
+  const matchRegex = match(regex) 
+  const findLineRegex = find(matchRegex) 
+  const findMatch = compose(matchRegex,findLineRegex,splitNewLine)
+  const foundLine = findMatch(text)
+  const values =  foundLine && foundLine.length > 0 ? foundLine.input.split(' ') : []
   const value = values.slice(-1)[0]
   return value
 }
 
-const getVariableValueInBrackets = (text, variable) => {
-  const regex = new RegExp('\\[(.*?)\\]')
-  const lines = text.split('\n')
-  const noEqualString = eq(variable)
-  const foundVariable = compose(noEqualString,firstWord)
-  
-  const matchLine = lines.find((line) => {
-    return foundVariable(line)
-  })
-  if (matchLine){
-    const newProperty = matchLine.match(regex)
-    const found = newProperty ? (newProperty[1].replace(/'|"/g,'')) : null
-    return found
-  }else {
-    return undefined
+const getValueAfterEqual = (text, variable) => {
+  const linesSplit = splitNewLine(text)
+  const lines = linesToSearch(linesSplit)
+  const stringContainsString = variable => line => line.indexOf(variable) > -1 
+  const stringToFind = stringContainsString(variable)
+  const matchedLine = lines(stringToFind)
+  const value = matchedLine ? matchedLine.substr(matchedLine.indexOf("=") + 1) : undefined
+  return value
+}
+
+const getVariableValueInDelimiter = (text, variable, preDelimiter, posDelimiter) => {
+  const regex = `\\${preDelimiter}(.*?)\\${posDelimiter}`
+  const regexBuilt = new RegExp(regex)
+  const variableMatch = compose(eq(variable),firstWord)
+  const findLineMatch = compose(find(variableMatch),splitNewLine)
+  const foundLine = findLineMatch(text)
+  let found = undefined
+  if (foundLine){
+    const newProperty = foundLine.match(regexBuilt)
+    found = newProperty && newProperty.length > 1 ? replaceQuotesBlank(newProperty[1]) : undefined
   }
+  return found
 }
 
 const parseSectionLines = (lines, section) => {
@@ -88,21 +139,19 @@ const findPropertiesFiles = (path = './') => {
 }
 
 const findPropertiesPath = (text) => {
-  const lines = text.split('\n')
-  let properties = []
-  lines.forEach((line) => {
-    const found = line.match(new RegExp('.new Properties()'))
-    if (found) {
-      const variableName = findVariableName(found.input)
-      if (variableName)
-      {
-        properties.push(variableName)
-      }
-    } 
-  })
-  const childBuilded =  childBuilder(properties)
-  const buildedRegex = closureOrBuilder(childBuilded)
-  const paths = findPathByRegex(lines,buildedRegex)
+  const lines = splitNewLine(text)
+  const regExp = new RegExp('.new Properties()')
+  const matchRegex = match(regExp)
+  const regexPropertiesGenerator =  compose
+  (
+    closureOrBuilder,
+    childBuilder, 
+    map(findVariableName),
+    filter(matchRegex),
+    splitNewLine
+  )
+  const regexBuilt = regexPropertiesGenerator(text)
+  const paths = findPathByRegex(lines,regexBuilt)
   return paths
 }
 
@@ -124,45 +173,38 @@ const findPathByRegex = (lines,regex) =>{
   const variables = collation.get(false)
   let paths = collation.get(true)
   if (variables && variables.length > 0){
-    console.log('------------------------------------------- RECURSIVE----------------------------')
-    const regexBuild = childBuilder(variables)
-    const builder = closureOrBuilder(regexBuild)
-    const result = findPathByRegex(lines,builder)
+    const regexBuild = (closureOrBuilder,childBuilder)
+    const result = findPathByRegex(lines,regexBuild(variables))
     paths = paths.concat(result)
-    return paths
-  }else{
-    return paths
   }
+  return paths
 }
 
 const findVariableName = (line) => {
   const regex = new RegExp("\\w+(?=\\s+=)")
   const newProperty = line.match(regex)
-  return newProperty[0]
+  return newProperty && newProperty.length > 0 ? newProperty[0] : undefined
 }
 
 const findRoot = (line) => {
-  
   const regex = new RegExp("(new FileInputStream\\((.*?)\\)\\)|file\\((.*?)\\)\\)|file\\((.*?)\\))")
   const newProperty = line.match(regex)
-
-  if (newProperty[0].includes('file')){ 
+  const includeFile = includes('file')
+  if (includeFile(newProperty[0])){ 
     //Returns a path
     const regexFile = new RegExp('file\\((.*?)\\)')
     const filePath = line.match(regexFile)
     const value = filePath[1]
-    const replaced = value.replace(/'|"/g,''); 
+    const replaced = replaceQuotesBlank(value)
     return replaced
   }else{
-    //Return a new variable
-    // console.log('RETURNING OTHER CASE, length' ,newProperty)
-    const filterUndefined = newProperty.filter(Boolean);
+    const filterUndefined = newProperty.filter(Boolean)
     return newProperty[filterUndefined.length - 1]
   }
 }
 
 const findFiles = (folder, matching) => {
-  return filesystem.find(folder, { matching: matching});
+  return filesystem.find(folder, { matching: matching})
 }
 
 const createKeystore = async (options) => {
@@ -176,52 +218,6 @@ const createKeystore = async (options) => {
   return encodedKeystore
 }
 
-const closureOrBuilder = (pattern) => regexBuilder('', '|','(',')', pattern)
-const childBuilder = (properties) => properties.map(property => regexBuilder(property, '|','','', ['.*load', '.*file']))
-const firstWord = string => string.trim().split(' ')[0];
-const collateBy = f => g => xs => {
-  return xs.reduce((m,x) => {
-    let v = f(x)
-    return m.set(v, g(m.get(v), x))
-  }, new Map())
-}
-const regexBuilder = (property, operator, prefix, postfix, patternArray) => {
-  let builded = ''
-  if (patternArray === ''){
-    builded =  property + operator
-  }else{
-    builded = patternArray.reduce((total, pattern, index, array) => {
-      if (index === 0){
-        total =  property + pattern
-      } else {
-        total = total + operator  + property  + pattern
-      }
-      if (index == array.length - 1){
-        total = total 
-      }
-      return total
-    },'')
-  }
-  builded = prefix + builded + postfix
-  return  builded
-}
-
-const compose = (...functions) => data =>
-  functions.reduceRight((value, func) => func(value), data)
-
-const eq = curry((a, b) => a === b)
-  
-function curry(fn) {
-  const arity = fn.length
-  return function $curry(...args) {
-    if (args.length < arity) {
-      return $curry.bind(null, ...args)
-    }
-
-    return fn.call(null, ...args)
-  }
-}
-
 module.exports = {
   createKeystore,
   findKeystoreFiles,
@@ -229,7 +225,9 @@ module.exports = {
   findPropertiesPath,
   findRoot,
   getConfigSection,
-  getVariableValue,
+  getValueFromProperty,
+  getValueAfterEqual,
   getFirstAZWordFromSection,
-  getVariableValueInBrackets,
+  getVariableValueInDelimiter,
+  replaceDotSlash,
 }
