@@ -110,7 +110,7 @@ describe('Ask Keystore questions', () => {
 			io.send('exampleProject/android/internalProject-key.keystore')
 			io.send(keys.enter)
 		}
-		setTimeout(() => sendKeystrokes2().then(), 5)
+		setTimeout(() => sendKeystrokes2().then(), 6)
 		const result = await initChoicesKeystoreFlow(choices)
 		expect(result).toEqual('exampleProject/android/internalProject-key.keystore')
 		done()
@@ -221,7 +221,7 @@ describe('Ask Property file questions', () => {
 			io.send('exampleProject/android/gradle.properties')
 			io.send(keys.enter)
 		}
-		setTimeout(() => sendKeystrokes2().then(), 5)
+		setTimeout(() => sendKeystrokes2().then(), 6)
 		const result = await initChoicesPropertyFlow(choices)
 		expect(result).toEqual('exampleProject/android/gradle.properties')
 		done()

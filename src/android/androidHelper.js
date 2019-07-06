@@ -1,5 +1,5 @@
 
-const { filesystem, print, system } = require('gluegun')
+const { filesystem, print, system, strings } = require('gluegun')
 const { 
   eq,
 	notMatch,
@@ -49,7 +49,6 @@ const childBuilder = (properties) => properties.map(property => regexBuilder(pro
 const firstWord = string => string.trim().split(' ')[0]
 const replaceDotSlash =  replace(/\.\//g)
 const getConfigSection = (text, section) => {
-  console.log('text', text)
   sectionArr = Array.isArray(section) ? section : [section] 
   let sectionToFind = sectionArr[0]
   let sectionStr = ''
@@ -105,6 +104,22 @@ const getVariableValueInDelimiter = (text, variable, preDelimiter, posDelimiter)
     found = newProperty && newProperty.length > 1 ? replaceQuotesBlank(newProperty[1]) : undefined
   }
   return found
+}
+
+const retrieveValuesFromPropertiesVariables = async(commandPath) => {
+  const gradlewCmd = './gradlew properties'
+  const gradlewProperties =  await strings.trim(await system.run(`${commandPath} && ${gradlewCmd}`))
+  const keystoreFile = getValueFromProperty(gradlewProperties,'STORE_FILE')
+  const keystorePassword = getValueFromProperty(gradlewProperties,'STORE_PASSWORD')
+  const keystoreAlias = getValueFromProperty(gradlewProperties,'KEY_ALIAS')
+  const keystoreAliasPassword = getValueFromProperty(gradlewProperties,'KEY_PASSWORD')
+  const values = {
+    keystoreAliasPassword,
+    keystoreAlias,
+    keystorePassword,
+    keystoreFile: keystoreFile
+  }
+  return values 
 }
 
 const parseSectionLines = (lines, section) => {
@@ -175,7 +190,9 @@ const findPathByRegex = (lines,regex) =>{
   if (variables && variables.length > 0){
     const regexBuild = (closureOrBuilder,childBuilder)
     const result = findPathByRegex(lines,regexBuild(variables))
-    paths = paths.concat(result)
+    if(result){
+      paths = paths.concat(result)
+    }
   }
   return paths
 }
@@ -190,6 +207,9 @@ const findRoot = (line) => {
   const regex = new RegExp("(new FileInputStream\\((.*?)\\)\\)|file\\((.*?)\\)\\)|file\\((.*?)\\))")
   const newProperty = line.match(regex)
   const includeFile = includes('file')
+  if (!newProperty){
+    return undefined
+  }
   if (includeFile(newProperty[0])){ 
     //Returns a path
     const regexFile = new RegExp('file\\((.*?)\\)')
@@ -218,6 +238,29 @@ const createKeystore = async (options) => {
   return encodedKeystore
 }
 
+const retrieveHardcodedProperties = releaseSection => {
+  const keystoreAlias = getVariableValueInDelimiter(releaseSection,'keyAlias',"'","'")
+  const keystorePassword  = getVariableValueInDelimiter(releaseSection,'storePassword',"'","'")
+  const keystoreAliasPassword = getVariableValueInDelimiter(releaseSection,'keyPassword',"'","'")
+  const keystoreFile = getVariableValueInDelimiter(releaseSection,'storeFile',"'","'")
+  const values = {
+    keystoreAliasPassword,
+    keystoreAlias,
+    keystorePassword,
+    keystoreFile
+  }
+  return values
+}
+
+const geFirstWordsFromSection = releaseSection => {
+  const firstWords = getFirstAZWordFromSection(releaseSection)
+  const dictGradle = firstWords.map(word => {
+    const value = getVariableValueInDelimiter(releaseSection, word,'[', ']')
+    return{key:word, value:value}
+  })
+  return dictGradle
+}
+
 module.exports = {
   createKeystore,
   findKeystoreFiles,
@@ -225,9 +268,12 @@ module.exports = {
   findPropertiesPath,
   findRoot,
   getConfigSection,
+  geFirstWordsFromSection,
   getValueFromProperty,
   getValueAfterEqual,
   getFirstAZWordFromSection,
   getVariableValueInDelimiter,
   replaceDotSlash,
+  retrieveHardcodedProperties,
+  retrieveValuesFromPropertiesVariables,
 }

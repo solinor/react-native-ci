@@ -7,6 +7,8 @@ const {
   findPropertiesFiles, 
   findPropertiesPath,
   replaceDotSlash,
+  retrieveHardcodedProperties,
+  retrieveValuesFromPropertiesVariables,
 } = require('../android/androidHelper')
 const { 
   askInputKeystoreFilePath,
@@ -74,50 +76,22 @@ const initAndroid = async ({ android, prompt, print, circle, system, strings, fi
     keystoreFile : '',
   }
   if (!releaseSection) {
-    //Explain why we need this
+    print.info('Android requires that all APKs be digitally signed with a certificate before they are installed on a device or updated')
+    //Explain why we need this and ask questions
     const { keystoreAlias, keystorePassword , keystoreAliasPassword }  = await askKeystoreQuestions(prompt, options)
     keystoreAnswers.keystoreFile = ''
     keystoreAnswers.keystorePassword = keystorePassword
     keystoreAnswers.keystoreAlias = keystoreAlias
     keystoreAnswers.keystoreAliasPassword = keystoreAliasPassword
-  } else { //ReleaseSection exists
-    //Check if values are hardcoded in section else
-     //Implement it in case it is not hard coded
-     const gradle = filesystem.read('android/app/build.gradle')
-     const propertiesLocation = findPropertiesPath(gradle)
-     if (propertiesLocation){
-       //read file and try to retrieve properties. 
-      // if success exit and continue
-      //TODO: Read section 
-      const firstWords = getFirstAZWordFromSection(releaseSection)
-      let dictGradle = []
-      firstWords.map(word => {
-        const value = getVariableValueInDelimiter(releaseSection, word,'[', ']')
-        dictGradle.push({key:word, value:value})
-        dictGradle[word] = value
-     })
-      const replacedString = replaceDotSlash('./android/')
-      const fileParsedPath = replacedString(propertiesLocation[2])
-      const propertyFile = filesystem.read(fileParsedPath)
-      let dictionary = {}
-      dictGradle.forEach((dictValue) => { 
-        const value = getValueAfterEqual(propertyFile,dictValue.value)
-        dictionary[dictValue.key] = value
-      })
-      keystoreAnswers.keystoreFile = dictionary['storeFile']
-      keystoreAnswers.keystorePassword = dictionary['storePassword']
-      keystoreAnswers.keystoreAlias = dictionary['keyAlias']
-      keystoreAnswers.keystoreAliasPassword = dictionary['keyPassword']
-     }
-    if(keystoreAnswers.keystoreFile || keystoreAnswers.storePassword || keystoreAnswers.keyPassword || keystoreAnswers.storeFile){
-      //Find properties in gradle
-      const properties =  await strings.trim(await system.run('cd android/ && ./gradlew properties'))
-      getValueFromProperty(properties,'.property')
-      keystoreAnswers.keystoreFile = getValueFromProperty(properties,'STORE_FILE')
-      keystoreAnswers.keystorePassword = getValueFromProperty(properties,'STORE_PASSWORD')
-      keystoreAnswers.keystoreAlias = getValueFromProperty(properties,'KEY_ALIAS')
-      keystoreAnswers.keystoreAliasPassword = getValueFromProperty(properties,'KEY_PASSWORD')
-    }
+  } else { //ReleaseSection exists. Try to retrieve the vales
+    const { keystoreFile,
+      keystoreAlias, 
+      keystorePassword, 
+      keystoreAliasPassword } = await retrieveValuesFromSection(releaseSection, filesystem, print)
+    keystoreAnswers.keystoreFile = keystoreFile
+    keystoreAnswers.keystorePassword = keystorePassword
+    keystoreAnswers.keystoreAlias = keystoreAlias
+    keystoreAnswers.keystoreAliasPassword = keystoreAliasPassword
   }
   await setupKeystoreFile(android, print, circle,filesystem, prompt, options, keystoreAnswers)
 
@@ -132,6 +106,49 @@ const initAndroid = async ({ android, prompt, print, circle, system, strings, fi
       value: encodedPlayStoreJSON
     })
   }
+}
+
+const retrieveValuesFromPropertyFile = (releaseSection, filesystem) => {
+  const gradle = filesystem.read('android/app/build.gradle')
+  const propertiesLocation = findPropertiesPath(gradle)
+  let values = undefined
+  if (propertiesLocation){
+    const dictGradle = geFirstWordsFromSection(releaseSection)
+    const replaceWithAndroidPath = replaceDotSlash('./android/')
+    const fs = propertiesLocation.filter(filesystem.read())
+    if (!fs || fs.length === 0) return undefined
+    const fileParsedPath = replaceWithAndroidPath(fs[0])
+    let dictionary = {}
+    dictGradle.forEach((dictValue) => { 
+      const value = getValueAfterEqual(fileParsedPath,dictValue.value)
+      dictionary[dictValue.key] = value
+    })
+    const keystoreFile = dictionary['storeFile']
+    const keystorePassword = dictionary['storePassword']
+    const keystoreAlias = dictionary['keyAlias']
+    const keystoreAliasPassword = dictionary['keyPassword']
+    values = {
+      keystoreAliasPassword,
+      keystoreAlias,
+      keystorePassword,
+      keystoreFile: keystoreFile
+    } 
+  }
+  return values 
+}
+
+const retrieveValuesFromSection = async (releaseSection, filesystem, print) => {
+  const propertiesSpinner = print.spin('Trying to retrieve signing information...')
+  let values = retrieveHardcodedProperties(releaseSection)
+  if (!values || !values.keystoreAlias){
+    values = retrieveValuesFromPropertyFile(releaseSection, filesystem)
+  }
+  if(!values || !values.keystoreAlias){
+    const pathCommand = 'cd android/'
+    values = retrieveValuesFromPropertiesVariables(pathCommand)
+  }
+  values ? propertiesSpinner.succeed('Got properties') : propertiesSpinner.failed('Failed trying to retrieve properties')
+  return {keystoreAliasPassword, keystoreAlias, keystorePassword, keystoreFile} = values
 }
 
 const initFastlane = async ({ system, android, template, filesystem, print }) => {

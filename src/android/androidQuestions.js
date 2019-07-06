@@ -40,11 +40,11 @@ const flowConfirmFilePath = async (file, message, askInput ) => {
 }
 
 const initChoicesKeystoreFlow = choices => {
-	return flowChooseFilePath(choices, askInputKeystoreFilePath(), SELECT_PROPERTY)
+	return flowChooseFilePath(choices, askInputKeystoreFilePath, SELECT_PROPERTY)
 }
 
 const initChoicesPropertyFlow = choices => {
-	return flowChooseFilePath(choices, askInputPropertyFilePath(), SELECT_KEYSTORE)
+	return flowChooseFilePath(choices, askInputPropertyFilePath, SELECT_KEYSTORE)
 }
 
 const flowChooseFilePath = async (choices, askInput, message) => {
@@ -84,9 +84,9 @@ const askConfirmFilePath = async (message) => {
 
 const getFileResponse = (fn, file ) => (
 	matchCase(file)
-    .on(x => x === SELECT_ANOTHER_ONE, () => fn)
+    .on(x => x === SELECT_ANOTHER_ONE, () => fn())
     .on(x => x === CREATE_A_NEW_ONE, () => '')
-		.otherwise(x => filesystem.exists(file) ? file : fn)
+		.otherwise(x => filesystem.exists(file) ? file : fn())
 )
 
 module.exports = {
