@@ -33,7 +33,8 @@
   "license": "MIT",
   "dependencies": {
     "gluegun": "^3.2.0",
-    "install-packages": "^0.2.5"
+    "install-packages": "^0.2.5",
+    "ramda": "^0.26.1"
   },
   "devDependencies": {
     "@semantic-release/git": "^7.0.8",
