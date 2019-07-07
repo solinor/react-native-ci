@@ -1,17 +1,6 @@
 
 const { filesystem, print, system, strings } = require('gluegun')
-const { 
-  eq,
-	notMatch,
-	match,
-	includes,
-	map,
-  filter,
-  replace,
-  find,
-  curry,
-  compose
-  } = require('../utils/functional')
+const R = require('ramda');
 
 const collateBy = f => g => xs => {
   return xs.reduce((m,x) => {
@@ -40,14 +29,14 @@ const regexBuilder = (property, operator, prefix, postfix, patternArray) => {
   return  builded
 }
 
-const linesToSearch = curry((lines, x) => lines.find(x))
+const linesToSearch = R.curry((lines, x) => lines.find(x))
 const splitNewLine = text =>  text.trim().split('\n')
-const replaceQuotes = replace(/'|"/g)
+const replaceQuotes = R.replace(/'|"/g)
 const replaceQuotesBlank = replaceQuotes('')
 const closureOrBuilder = (pattern) => regexBuilder('', '|','(',')', pattern)
 const childBuilder = (properties) => properties.map(property => regexBuilder(property, '|','','', ['.*load', '.*file']))
 const firstWord = string => string.trim().split(' ')[0]
-const replaceDotSlash =  replace(/\.\//g)
+const replaceDotSlash =  R.replace(/\.\//g)
 const getConfigSection = (text, section) => {
   sectionArr = Array.isArray(section) ? section : [section] 
   let sectionToFind = sectionArr[0]
@@ -62,20 +51,21 @@ const getConfigSection = (text, section) => {
 }
 
 const getFirstAZWordFromSection = section => {
-  const builder= regexBuilder('', '|','(',')', ['{','}'])
-  const noBrackets = notMatch(builder)
-  const noBracketsFilter = filter(noBrackets)
-  const fistWords = map(firstWord)
-  const findWords = compose(fistWords,noBracketsFilter,splitNewLine) 
+  const builder = new RegExp(regexBuilder('', '|','(',')', ['{','}']))
+  const noBrackets = R.complement(R.test(builder))
+  const noBracketsFilter = R.filter(noBrackets)
+  const fistWords = R.map(firstWord)
+  const findWords = R.compose(fistWords,noBracketsFilter,splitNewLine) 
   const words = findWords(section)
   return words
 } 
 
 const getValueFromProperty = (text, variable) => {
   const regex = new RegExp(variable +'.* ')
-  const matchRegex = match(regex) 
-  const findLineRegex = find(matchRegex) 
-  const findMatch = compose(matchRegex,findLineRegex,splitNewLine)
+  const testRegex = R.test(regex)
+  const matchRegex = R.match(regex)
+  const findLineRegex = R.find(testRegex) 
+  const findMatch = R.compose(matchRegex,findLineRegex,splitNewLine)
   const foundLine = findMatch(text)
   const values =  foundLine && foundLine.length > 0 ? foundLine.input.split(' ') : []
   const value = values.slice(-1)[0]
@@ -95,8 +85,8 @@ const getValueAfterEqual = (text, variable) => {
 const getVariableValueInDelimiter = (text, variable, preDelimiter, posDelimiter) => {
   const regex = `\\${preDelimiter}(.*?)\\${posDelimiter}`
   const regexBuilt = new RegExp(regex)
-  const variableMatch = compose(eq(variable),firstWord)
-  const findLineMatch = compose(find(variableMatch),splitNewLine)
+  const variableMatch = R.compose(R.equals(variable),firstWord)
+  const findLineMatch = R.compose(R.find(variableMatch),splitNewLine)
   const foundLine = findLineMatch(text)
   let found = undefined
   if (foundLine){
@@ -156,13 +146,13 @@ const findPropertiesFiles = (path = './') => {
 const findPropertiesPath = (text) => {
   const lines = splitNewLine(text)
   const regExp = new RegExp('.new Properties()')
-  const matchRegex = match(regExp)
-  const regexPropertiesGenerator =  compose
+  const matchRegex = R.test(regExp)
+  const regexPropertiesGenerator =  R.compose
   (
     closureOrBuilder,
     childBuilder, 
-    map(findVariableName),
-    filter(matchRegex),
+    R.map(findVariableName),
+    R.filter(matchRegex),
     splitNewLine
   )
   const regexBuilt = regexPropertiesGenerator(text)
@@ -206,7 +196,7 @@ const findVariableName = (line) => {
 const findRoot = (line) => {
   const regex = new RegExp("(new FileInputStream\\((.*?)\\)\\)|file\\((.*?)\\)\\)|file\\((.*?)\\))")
   const newProperty = line.match(regex)
-  const includeFile = includes('file')
+  const includeFile = R.includes('file')
   if (!newProperty){
     return undefined
   }
