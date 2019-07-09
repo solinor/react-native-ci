@@ -1,5 +1,5 @@
 const { 
-  getValueFromProperty, 
+  geFirstWordsFromSection, 
   getValueAfterEqual, 
   getFirstAZWordFromSection, 
   getVariableValueInDelimiter, 
@@ -7,6 +7,7 @@ const {
   findPropertiesFiles, 
   findPropertiesPath,
   replaceDotSlash,
+  readGradleFile,
   retrieveHardcodedProperties,
   retrieveValuesFromPropertiesVariables,
 } = require('../android/androidHelper')
@@ -109,18 +110,18 @@ const initAndroid = async ({ android, prompt, print, circle, system, strings, fi
 }
 
 const retrieveValuesFromPropertyFile = (releaseSection, filesystem) => {
-  const gradle = filesystem.read('android/app/build.gradle')
-  const propertiesLocation = findPropertiesPath(gradle)
+  const gradle = readGradleFile().getOrElse('')
+  const propertiesLocation = gradle ? findPropertiesPath(gradle) : undefined
   let values = undefined
   if (propertiesLocation){
     const dictGradle = geFirstWordsFromSection(releaseSection)
     const replaceWithAndroidPath = replaceDotSlash('./android/')
-    const fs = propertiesLocation.filter(filesystem.read())
-    if (!fs || fs.length === 0) return undefined
-    const fileParsedPath = replaceWithAndroidPath(fs[0])
+    const replaceAndroid = propertiesLocation.map(replaceWithAndroidPath)
+    const filteredFs = replaceAndroid.filter(path => path && filesystem.exists(path))
+    if (!filteredFs || filteredFs.length === 0) return undefined
     let dictionary = {}
     dictGradle.forEach((dictValue) => { 
-      const value = getValueAfterEqual(fileParsedPath,dictValue.value)
+      const value = getValueAfterEqual(filesystem.read(filteredFs[0]),dictValue.value).getOrElse('')
       dictionary[dictValue.key] = value
     })
     const keystoreFile = dictionary['storeFile']
@@ -138,6 +139,7 @@ const retrieveValuesFromPropertyFile = (releaseSection, filesystem) => {
 }
 
 const retrieveValuesFromSection = async (releaseSection, filesystem, print) => {
+ 
   const propertiesSpinner = print.spin('Trying to retrieve signing information...')
   let values = retrieveHardcodedProperties(releaseSection)
   if (!values || !values.keystoreAlias){
@@ -285,9 +287,10 @@ const setupKeystoreFile = async (android, print, circle, filesystem, prompt, opt
   
   if (storeFile === '') { 
     const file = await matchCase(findKeystoreFiles())
-    .on(x => x.length === 0, () => askInputKeystoreFilePath)
+    .on(x => x.length === 0, () => askInputKeystoreFilePath())
     .on(x => x.length === 1, (x) => confirmKeyStoreFilePath(x.pop()))
     .otherwise(x => initChoicesKeystoreFlow(x))
+    console.log('file', file)
     if (file && filesystem.read(file)){
       storeFile = file
     }else{
@@ -299,7 +302,7 @@ const setupKeystoreFile = async (android, print, circle, filesystem, prompt, opt
     const releaseSection = android.getConfigSection(['signingConfigs', 'release']) 
     
     const keyStoreProperties =  await matchCase(findPropertiesFiles())
-    .on(x => x.length === 0, () => askInputPropertyFilePath)
+    .on(x => x.length === 0, () => askInputPropertyFilePath())
     .on(x => x.length === 1, (x) => confirmPropertyFilePath(x.pop()))
     .otherwise(x => initChoicesPropertyFlow(x))
     if(!keyStoreProperties){

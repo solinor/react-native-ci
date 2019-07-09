@@ -1,13 +1,14 @@
-const { stdin } = require ('mock-stdin')
 const { 
-		askInputKeystoreFilePath,
-		confirmKeyStoreFilePath,
-		initChoicesKeystoreFlow,
-		askInputPropertyFilePath,
-		confirmPropertyFilePath,
-		initChoicesPropertyFlow,
-	 } = require('../androidQuestions')
+	askInputKeystoreFilePath,
+	confirmKeyStoreFilePath,
+	initChoicesKeystoreFlow,
+	askInputPropertyFilePath,
+	confirmPropertyFilePath,
+	initChoicesPropertyFlow,
+ } = require('../androidQuestions')
 
+ //Keyboard setup
+ const { stdin } = require ('mock-stdin')
 // Key codes
 const keys = {
 	up: '\x1B\x5B\x41',
@@ -15,7 +16,8 @@ const keys = {
 	enter: '\x0D',
 	space: '\x20'
 }
-
+// helper function for timing
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 let io = null
 beforeAll(() => (io = stdin()))
 afterAll(() => io.restore())
@@ -23,10 +25,10 @@ afterAll(() => io.restore())
 describe('Ask Keystore questions', () => {
 	test('validate file path ', async done => {
 		const sendKeystrokes = async () => {
-				io.send('exampleProject/android/internalProject-key.keystore')
-				io.send(keys.enter)
-			}
-			setTimeout(() => sendKeystrokes().then(), 5)
+			io.send('exampleProject/android/internalProject-key.keystore')
+			io.send(keys.enter)
+		}
+		setTimeout(() => sendKeystrokes().then(), 5)
 		const result = await askInputKeystoreFilePath()
 		expect(result).toEqual('exampleProject/android/internalProject-key.keystore')
 		done()
@@ -34,10 +36,10 @@ describe('Ask Keystore questions', () => {
 
 	test('Create a new keystore ', async done => {
 		const sendKeystrokes = async () => {
-				io.send()
-				io.send(keys.enter)
-			}
-			setTimeout(() => sendKeystrokes().then(), 5)
+			io.send()
+			io.send(keys.enter)
+		}
+		setTimeout(() => sendKeystrokes().then(), 5)
 		const result = await askInputKeystoreFilePath()
 		expect(result).toEqual('')
 		done()
@@ -47,13 +49,12 @@ describe('Ask Keystore questions', () => {
 		const sendKeystrokes = async () => {
 			io.send('exampleProject/android/internalProject-key.keystore1')
 			io.send(keys.enter)
-		}
-		setTimeout(() => sendKeystrokes().then(), 5)
-		const sendKeystrokes2 = async () => {
+			await delay(10)
 			io.send('exampleProject/android/internalProject-key.keystore')
 			io.send(keys.enter)
+			await(10)
 		}
-		setTimeout(() => sendKeystrokes2().then(), 6)
+		setTimeout(() => sendKeystrokes().then(), 5)
 		const result = await askInputKeystoreFilePath()
 		
 		expect(result).toEqual('exampleProject/android/internalProject-key.keystore')
@@ -74,13 +75,11 @@ describe('Ask Keystore questions', () => {
 		const sendKeystrokes = async () => {
 			io.send('no')
 			io.send(keys.enter)
-		}
-			setTimeout(() => sendKeystrokes().then(), 5)
-		const sendKeystrokes2 = async () => {
+			await delay(10)
 			io.send('exampleProject/android/internalProject-key.keystore')
 			io.send(keys.enter)
 		}
-		setTimeout(() => sendKeystrokes2().then(), 5)
+		setTimeout(() => sendKeystrokes().then(), 5)
 		const result = await confirmKeyStoreFilePath('exampleProject/android/internalProject-key.keystore')
 		expect(result).toEqual('exampleProject/android/internalProject-key.keystore')
 		done()
@@ -104,13 +103,11 @@ describe('Ask Keystore questions', () => {
 			io.send(keys.down)
 			io.send(keys.down)
 			io.send(keys.enter)
-		}
-		setTimeout(() => sendKeystrokes().then(), 5)
-		const sendKeystrokes2 = async () => {
+			await delay(10)
 			io.send('exampleProject/android/internalProject-key.keystore')
 			io.send(keys.enter)
 		}
-		setTimeout(() => sendKeystrokes2().then(), 6)
+		setTimeout(() => sendKeystrokes().then(), 5)
 		const result = await initChoicesKeystoreFlow(choices)
 		expect(result).toEqual('exampleProject/android/internalProject-key.keystore')
 		done()
@@ -148,24 +145,22 @@ describe('Ask Property file questions', () => {
 				io.send()
 				io.send(keys.enter)
 			}
-			setTimeout(() => sendKeystrokes().then(), 5)
+		setTimeout(() => sendKeystrokes().then(), 5)
 		const result = await askInputPropertyFilePath()
 		expect(result).toEqual('')
 		done()
 	})
 
 	test('Validate a property file path after typing an nonexistent one  ', async done => {
-			const sendKeystrokes = async () => {
-				io.send('exampleProject/android/gradle.properties1')
-				io.send(keys.enter)
-			}
-			setTimeout(() => sendKeystrokes().then(), 5)
-			const sendKeystrokes2 = async () => {
-				io.send('exampleProject/android/gradle.properties')
-				io.send(keys.enter)
-			}
-			setTimeout(() => sendKeystrokes2().then(), 6)
-			const result = await askInputPropertyFilePath()
+		const sendKeystrokes = async () => {
+			io.send('exampleProject/android/gradle.properties1')
+			io.send(keys.enter)
+			await delay(10)
+			io.send('exampleProject/android/gradle.properties')
+			io.send(keys.enter)
+		}
+		setTimeout(() => sendKeystrokes().then(), 5)
+		const result = await askInputPropertyFilePath()
 		
 		expect(result).toEqual('exampleProject/android/gradle.properties')
 		done()
@@ -185,13 +180,11 @@ describe('Ask Property file questions', () => {
 		const sendKeystrokes = async () => {
 			io.send('n')
 			io.send(keys.enter)
-		}
-			setTimeout(() => sendKeystrokes().then(), 5)
-		const sendKeystrokes2 = async () => {
+			await delay(10)
 			io.send('exampleProject/android/gradle.properties')
 			io.send(keys.enter)
 		}
-		setTimeout(() => sendKeystrokes2().then(), 6)
+		setTimeout(() => sendKeystrokes().then(), 5)
 		const result = await confirmPropertyFilePath('exampleProject/android/gradle.properties')
 		expect(result).toEqual('exampleProject/android/gradle.properties')
 		done()
@@ -215,13 +208,12 @@ describe('Ask Property file questions', () => {
 			io.send(keys.down)
 			io.send(keys.down)
 			io.send(keys.enter)
-		}
-		setTimeout(() => sendKeystrokes().then(), 5)
-		const sendKeystrokes2 = async () => {
+			await delay(10)
 			io.send('exampleProject/android/gradle.properties')
 			io.send(keys.enter)
+	
 		}
-		setTimeout(() => sendKeystrokes2().then(), 6)
+		setTimeout(() => sendKeystrokes().then(), 5)
 		const result = await initChoicesPropertyFlow(choices)
 		expect(result).toEqual('exampleProject/android/gradle.properties')
 		done()

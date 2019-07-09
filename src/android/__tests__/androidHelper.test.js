@@ -1,22 +1,25 @@
 const { filesystem} = require('gluegun')
+const Maybe = require('folktale/maybe');
 const { getConfigSection,
 	getValueFromProperty,
 	getValueAfterEqual,
 	getVariableValueInDelimiter,
 	getFirstAZWordFromSection,
 	geFirstWordsFromSection,
+	findAndroidPath,
 	findKeystoreFiles,
 	findPropertiesFiles,
 	findPropertiesPath,
 	findRoot,
+	readGradleFile,
 	retrieveHardcodedProperties,
 	retrieveValuesFromPropertiesVariables,
  } = require('../androidHelper')
-let gradle, no_release
+
+ const no_release = filesystem.read('src/android/__mocks__/no-release-build.gradle')
+ const gradle = filesystem.read('src/android/__mocks__/build.gradle')
 
 beforeEach(() => {
-	no_release = filesystem.read('src/android/__mocks__/no-release-build.gradle')
-	gradle = filesystem.read('src/android/__mocks__/build.gradle')
 	properties = filesystem.read('./exampleProject/android/app/internalCiProject-keystore.properties')
 });
 
@@ -24,6 +27,16 @@ describe('Config Section', () => {
 	test('no-release-build.gradle getConfigSection does not contains release sub section inside signingConfigs', async () => {
 		const output = getConfigSection(no_release, ['signingConfigs','release'])
 		expect(output).toBe('')
+	})
+
+	// test('find build.gradle file', async () => {
+	// 	const output = readGradleFile().getOrElse('')
+	// 	expect(output).not.toBe()
+	// })  
+	
+	test('find path for gradwle command', async () => {
+		const output = findAndroidPath().getOrElse('')
+		expect(output).toBe('exampleProject/android/')
 	})   
 
 	test('build.gradle getConfigSection contains signingConfigs', async () => {
@@ -49,13 +62,13 @@ describe('Config Section', () => {
 
 	test('get value from brackets in release section', async() => {
 		const output = getConfigSection(gradle, ['signingConfigs','release'])
-		const keyAlias = getVariableValueInDelimiter(output, 'keyAlias','[', ']')
+		const keyAlias = getVariableValueInDelimiter(output, 'keyAlias','[', ']').getOrElse('')
 		expect(keyAlias).toBe('INTERNALCIPROJECT_RELEASE_KEY_ALIAS')
 		
-		const keyPassword = getVariableValueInDelimiter(output, 'keyPassword','[', ']')
+		const keyPassword = getVariableValueInDelimiter(output, 'keyPassword','[', ']').getOrElse('')
 		expect(keyPassword).toBe('INTERNALCIPROJECT_RELEASE_KEY_PASSWORD')
 
-		const storePassword = getVariableValueInDelimiter(output, 'storePassword','[', ']')
+		const storePassword = getVariableValueInDelimiter(output, 'storePassword','[', ']').getOrElse('')
 		expect(storePassword).toBe('INTERNALCIPROJECT_RELEASE_STORE_PASSWORD')
 	})
 
@@ -66,9 +79,10 @@ describe('Config Section', () => {
 	})
 
 	test('getValueAfterEqual find variable in file and get value', async () => {
-		const storePassword = getValueAfterEqual(properties,'INTERNALCIPROJECT_RELEASE_STORE_PASSWORD')
+		const storePassword = getValueAfterEqual(properties,'INTERNALCIPROJECT_RELEASE_STORE_PASSWORD').getOrElse('')
+		// const storePassword = get(getValueAfterEqual).getOrElse();
 		expect(storePassword).toBe('123456')
-		const keyAlias = getValueAfterEqual(properties,'INTERNALCIPROJECT_RELEASE_KEY_ALIAS')
+		const keyAlias = getValueAfterEqual(properties,'INTERNALCIPROJECT_RELEASE_KEY_ALIAS').getOrElse('')
 		expect(keyAlias).toBe('app')
 	})
 
@@ -119,19 +133,19 @@ describe('Config Section', () => {
 			" keyPassword 'keypassword'\n" +
 		" }"
 		const keyAlias = 'keyAlias'
-		const value = getVariableValueInDelimiter(releaseSection, keyAlias,"'","'")
+		const value = getVariableValueInDelimiter(releaseSection, keyAlias,"'","'").getOrElse('')
 		expect(value).toBe('keystorealias')
 
 		const storePassword = 'storePassword'
-		const storePasswordValue = getVariableValueInDelimiter(releaseSection, storePassword, "'", "'")
+		const storePasswordValue = getVariableValueInDelimiter(releaseSection, storePassword, "'", "'").getOrElse('')
 		expect(storePasswordValue).toBe('password')
 
 		const keyPassword = 'keyPassword'
-		const keyPasswordValue = getVariableValueInDelimiter(releaseSection, keyPassword, "'", "'")
+		const keyPasswordValue = getVariableValueInDelimiter(releaseSection, keyPassword, "'", "'").getOrElse('')
 		expect(keyPasswordValue).toBe('keypassword')
 		
 		const storeFile = "storeFile"
-		const storeFileValue = getVariableValueInDelimiter(releaseSection, storeFile, "'", "'")
+		const storeFileValue = getVariableValueInDelimiter(releaseSection, storeFile, "'", "'").getOrElse('')
 		expect(storeFileValue).toBe('your/key/store/path')
 	})
 
@@ -161,17 +175,25 @@ describe('Config Section', () => {
 			"}\n" +
 		"}\n " 
 		const values = geFirstWordsFromSection(signingConfig)
-		expect(values[0].key).toBe('storeFile')
-		expect(values[0].value).toBe('RELEASE_STORE_FILE')
+		const storeFileKey = values[0].key
+		const storeFileValue = values[0].value
+		expect(storeFileKey).toBe('storeFile')
+		expect(storeFileValue).toBe('RELEASE_STORE_FILE')
 
-		expect(values[1].key).toBe('keyAlias')
-		expect(values[1].value).toBe('RELEASE_KEY_ALIAS')
+		const keyAliasKey = values[1].key
+		const keyAliasValue = values[1].value
+		expect(keyAliasKey).toBe('keyAlias')
+		expect(keyAliasValue).toBe('RELEASE_KEY_ALIAS')
 
-		expect(values[2].key).toBe('storePassword')
-		expect(values[2].value).toBe('RELEASE_STORE_PASSWORD')
+		const storePasswordKey = values[2].key
+		const storePasswordValue = values[2].value
+		expect(storePasswordKey).toBe('storePassword')
+		expect(storePasswordValue).toBe('RELEASE_STORE_PASSWORD')
 
-		expect(values[3].key).toBe('keyPassword')
-		expect(values[3].value).toBe('RELEASE_KEY_PASSWORD')
+		const keyPasswordKey = values[3].key
+		const keyPasswordValue = values[3].value
+		expect(keyPasswordKey).toBe('keyPassword')
+		expect(keyPasswordValue).toBe('RELEASE_KEY_PASSWORD')
 		}
 	)
 

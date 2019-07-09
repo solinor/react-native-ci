@@ -1,5 +1,5 @@
 const fs = require('fs')
-const { getConfigSection, createKeystore } = require('../android/androidHelper')
+const { getConfigSection, createKeystore, readGradleFile } = require('../android/androidHelper')
 
 // add your CLI-specific functionality here, which will then be accessible
 // to your commands
@@ -12,7 +12,7 @@ module.exports = toolbox => {
       } = toolbox
 
       let applicationId = ''
-      const gradle = filesystem.read('android/app/build.gradle')
+      const gradle =  readGradleFile().getOrElse('')
       const lines = gradle.split('\n')
       lines.forEach((line) => {
         const isAppId = line.includes('applicationId "')
@@ -30,15 +30,12 @@ module.exports = toolbox => {
         filesystem,
       } = toolbox
 
-      const gradle = filesystem.read('android/app/build.gradle')
+      const gradle = readGradleFile().getOrElse('')
       return gradle
     },
     getConfigSection: (section) => {
-      const {
-        filesystem,
-      } = toolbox
-      const file = filesystem.read('android/app/build.gradle')
-      return getConfigSection(file, section)
+      const gradle = readGradleFile().getOrElse('')
+      return gradle ? getConfigSection(gradle, section) : undefined
     },
     isLibraryLinked: (libraryName) => {
       const {

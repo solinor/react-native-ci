@@ -1,7 +1,7 @@
 
 const { filesystem, print, system, strings } = require('gluegun')
-const R = require('ramda');
-
+const R = require('ramda')
+const Result = require('folktale/result');
 const collateBy = f => g => xs => {
   return xs.reduce((m,x) => {
     let v = f(x)
@@ -28,6 +28,17 @@ const regexBuilder = (property, operator, prefix, postfix, patternArray) => {
   builded = prefix + builded + postfix
   return  builded
 }
+const readGradleFile = () => {
+  const gradle = filesystem.find('./', { matching: ['**/app/build.gradle', '!**/node_modules/**/*']  })
+  return gradle.length > 0 ? Result.Ok( filesystem.read(gradle[0])) :  Result.Error("File is not readable")
+}
+
+const findAndroidPath = () => {
+  const gradles = filesystem.find('./', { matching: ['**/android/app/build.gradle', '!**/node_modules/**/*']  })
+  const removeBuildGradlePath = R.replace(/app\/build\.gradle/g,'')
+  const path = gradles && gradles.length > 0?  Result.Ok(removeBuildGradlePath(gradles[0])): Result.Error("Not found path")
+  return path
+}
 
 const linesToSearch = R.curry((lines, x) => lines.find(x))
 const splitNewLine = text =>  text.trim().split('\n')
@@ -37,7 +48,10 @@ const closureOrBuilder = (pattern) => regexBuilder('', '|','(',')', pattern)
 const childBuilder = (properties) => properties.map(property => regexBuilder(property, '|','','', ['.*load', '.*file']))
 const firstWord = string => string.trim().split(' ')[0]
 const replaceDotSlash =  R.replace(/\.\//g)
+
 const getConfigSection = (text, section) => {
+  if(!text) return undefined
+  
   sectionArr = Array.isArray(section) ? section : [section] 
   let sectionToFind = sectionArr[0]
   let sectionStr = ''
@@ -63,42 +77,62 @@ const getFirstAZWordFromSection = section => {
 const getValueFromProperty = (text, variable) => {
   const regex = new RegExp(variable +'.* ')
   const testRegex = R.test(regex)
-  const matchRegex = R.match(regex)
+  const splitSpace  = R.split(' ')
+  const splitSpaces = val => val.input ? Result.Ok(splitSpace(val.input)) :  Result.Error("empty", '')
+  const either = line => line ? Result.Ok(line)  : Result.Error("no line to match")
+  const matchRegex = R.curry((regex,line) =>{
+    return line ?
+    Result.Ok(R.match(regex,line)) 
+    :  Result.Error("no line to match", property)
+  })
   const findLineRegex = R.find(testRegex) 
-  const findMatch = R.compose(matchRegex,findLineRegex,splitNewLine)
-  const foundLine = findMatch(text)
-  const values =  foundLine && foundLine.length > 0 ? foundLine.input.split(' ') : []
-  const value = values.slice(-1)[0]
-  return value
+  const findMatch = R.compose(findLineRegex,splitNewLine)
+  const result = either(findMatch(text)).chain(matchRegex(regex)).chain(splitSpaces)
+  const values = result.getOrElse('')
+  return R.last(values)
+  
 }
 
 const getValueAfterEqual = (text, variable) => {
+  const afterEqual = s => s.indexOf("=") > -1 ? s.substr(s.indexOf("=") + 1) : ''
   const linesSplit = splitNewLine(text)
   const lines = linesToSearch(linesSplit)
   const stringContainsString = variable => line => line.indexOf(variable) > -1 
   const stringToFind = stringContainsString(variable)
   const matchedLine = lines(stringToFind)
-  const value = matchedLine ? matchedLine.substr(matchedLine.indexOf("=") + 1) : undefined
-  return value
+  return matchedLine ?
+  Result.Ok(afterEqual(matchedLine)):
+  Result.Error("not equal value")
 }
 
 const getVariableValueInDelimiter = (text, variable, preDelimiter, posDelimiter) => {
   const regex = `\\${preDelimiter}(.*?)\\${posDelimiter}`
+  const findVariable = (regex, line ) => {
+    const value = line.match(regex)
+    return value
+  }
+  const getProperty = property => {
+    return property && property.length > 1 ? 
+    Result.Ok(replaceQuotesBlank(property[1])) 
+    :  Result.Error("no property matched", property)
+  }
   const regexBuilt = new RegExp(regex)
   const variableMatch = R.compose(R.equals(variable),firstWord)
   const findLineMatch = R.compose(R.find(variableMatch),splitNewLine)
   const foundLine = findLineMatch(text)
-  let found = undefined
-  if (foundLine){
-    const newProperty = foundLine.match(regexBuilt)
-    found = newProperty && newProperty.length > 1 ? replaceQuotesBlank(newProperty[1]) : undefined
-  }
+  let getVariable = foundLine => foundLine ? Result.Ok(findVariable(regexBuilt,foundLine)) :  Result.Error('Not match line')
+  const found = getVariable(foundLine).chain(getProperty)
   return found
 }
 
 const retrieveValuesFromPropertiesVariables = async(commandPath) => {
-  const gradlewCmd = './gradlew properties'
-  const gradlewProperties =  await strings.trim(await system.run(`${commandPath} && ${gradlewCmd}`))
+  const gradlewCmd = './gradlew properties' 
+  const command = x => x ? 
+  Result.Ok( `cd ${x} && ${gradlewCmd}`) :  Result.Error('no command')
+  const comm = findAndroidPath().chain(x => command(x)).getOrElse('')
+  if (!comm) return undefined
+ 
+  const gradlewProperties =  await strings.trim(await system.run(comm))
   const keystoreFile = getValueFromProperty(gradlewProperties,'STORE_FILE')
   const keystorePassword = getValueFromProperty(gradlewProperties,'STORE_PASSWORD')
   const keystoreAlias = getValueFromProperty(gradlewProperties,'KEY_ALIAS')
@@ -229,10 +263,10 @@ const createKeystore = async (options) => {
 }
 
 const retrieveHardcodedProperties = releaseSection => {
-  const keystoreAlias = getVariableValueInDelimiter(releaseSection,'keyAlias',"'","'")
-  const keystorePassword  = getVariableValueInDelimiter(releaseSection,'storePassword',"'","'")
-  const keystoreAliasPassword = getVariableValueInDelimiter(releaseSection,'keyPassword',"'","'")
-  const keystoreFile = getVariableValueInDelimiter(releaseSection,'storeFile',"'","'")
+  const keystoreAlias = getVariableValueInDelimiter(releaseSection,'keyAlias',"'","'").getOrElse('')
+  const keystorePassword  = getVariableValueInDelimiter(releaseSection,'storePassword',"'","'").getOrElse('')
+  const keystoreAliasPassword = getVariableValueInDelimiter(releaseSection,'keyPassword',"'","'").getOrElse('')
+  const keystoreFile = getVariableValueInDelimiter(releaseSection,'storeFile',"'","'").getOrElse('')
   const values = {
     keystoreAliasPassword,
     keystoreAlias,
@@ -245,7 +279,7 @@ const retrieveHardcodedProperties = releaseSection => {
 const geFirstWordsFromSection = releaseSection => {
   const firstWords = getFirstAZWordFromSection(releaseSection)
   const dictGradle = firstWords.map(word => {
-    const value = getVariableValueInDelimiter(releaseSection, word,'[', ']')
+    const value = getVariableValueInDelimiter(releaseSection, word,'[', ']').getOrElse('')
     return{key:word, value:value}
   })
   return dictGradle
@@ -253,6 +287,7 @@ const geFirstWordsFromSection = releaseSection => {
 
 module.exports = {
   createKeystore,
+  findAndroidPath,
   findKeystoreFiles,
   findPropertiesFiles,
   findPropertiesPath,
@@ -263,6 +298,7 @@ module.exports = {
   getValueAfterEqual,
   getFirstAZWordFromSection,
   getVariableValueInDelimiter,
+  readGradleFile,
   replaceDotSlash,
   retrieveHardcodedProperties,
   retrieveValuesFromPropertiesVariables,
