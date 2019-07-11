@@ -297,11 +297,11 @@ const setupKeystoreFile = async (android, print, circle, filesystem, prompt, opt
       storeFile = ''
     }
   } 
- 
+  let keyStoreProperties = undefined 
   if( !alias || !password || !aliasPassword ){
     const releaseSection = android.getConfigSection(['signingConfigs', 'release']) 
     
-    const keyStoreProperties =  await matchCase(findPropertiesFiles())
+    keyStoreProperties =  await matchCase(findPropertiesFiles())
     .on(x => x.length === 0, () => askInputPropertyFilePath())
     .on(x => x.length === 1, (x) => confirmPropertyFilePath(x.pop()))
     .otherwise(x => initChoicesPropertyFlow(x))
@@ -333,6 +333,7 @@ const setupKeystoreFile = async (android, print, circle, filesystem, prompt, opt
     alias: alias,
     aliasPassword: aliasPassword,
     keystoreFile: storeFile,
+    keyStoreProperties: keyStoreProperties || '' ,
   })
   
   print.info('Store keystore to secret variables')
