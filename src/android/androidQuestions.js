@@ -34,7 +34,7 @@ const confirmPropertyFilePath = file => (
 )
 
 const flowConfirmFilePath = async (file, message, askInput ) => {
-	const isValidFile = await askConfirmFilePath(message)
+	const isValidFile = process.env.INTEGRATION_TEST  ? true : await askConfirmFilePath(message)
 	const verification = isValidFile && filesystem.exists(file)
 	return actionToFileExist(verification,file, askInput)
 }

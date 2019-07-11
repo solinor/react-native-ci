@@ -11,12 +11,12 @@ module.exports = toolbox => {
         const api = http.create({
           baseURL: 'https://circleci.com/api/v1.1/'
         })
-      
-        await api.post(
+        const {status} = await api.post(
           `project/github/${org}/${project}/envvar?circle-token=${apiToken}`,
           {name: key, value: value },
           {headers: {'Content-Type': 'application/json'}}
         )
+        return status
       },
       followProject: async ({ org, project, apiToken}) => {
         const { http } = toolbox

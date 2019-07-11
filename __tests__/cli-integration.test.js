@@ -1,22 +1,24 @@
-const { system, filesystem } = require('gluegun')
-const { resolve } = require('path')
+const {run} = require('../src/cli')
 
-const src = resolve(__dirname, '..')
-
-const cli = async cmd =>
-  system.run('node ' + resolve(src, 'bin', 'react-native-ci') + ` ${cmd}`)
-
+beforeAll(() => {
+  jest.setTimeout(10000) //Mandatory for API Request
+  process.env.INTEGRATION_TEST = true}) 
+afterAll(() => {
+  jest.setTimeout(5000)
+  process.env.INTEGRATION_TEST= false
+}) //Back to normal
 describe('Options', () => {
-  test('test', () => {
-    expect(1).toBe(1)
+  test('can start the cli', async () => {
+    const c = await run()
+    expect(c).toBeTruthy()
   })
-  // test('outputs version', async () => {
-  //   const output = await cli('--version')
-  //   expect(output).toContain('0.1.3')
-  // })
-  
-  // test('outputs help', async () => {
-  //   const output = await cli('--help')
-  //   expect(output).toContain('0.1.3')
-  // })
+ 
+  test('android init', async done => {
+      const toolbox = await run()
+      const output = await toolbox.system.exec(`react-native-ci init --android --githubOrg company --repo xxxxx --circleApi 123456 --googleJsonPath ./ `)
+      expect(output).toMatch(/CircleCI/)
+      //TODO: Add more matches
+		done()
+	})
+	
 })
