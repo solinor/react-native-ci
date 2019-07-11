@@ -2,6 +2,7 @@
 
 const { filesystem, prompt} = require('gluegun')
 const { matchCase } = require('../utils/functional')
+const R = require('ramda')
 const SELECT_ANOTHER_ONE = 'Select a different one'
 const CREATE_A_NEW_ONE = 'Create a new one'
 const PATH_TO_KEYSTORE = 'Write the path to keystore.key? Leave it empty to create one'
@@ -12,8 +13,7 @@ const SELECT_PROPERTY = 'We found the following store file. Which one do you wan
 const SELECT_KEYSTORE = 'We found the following properties file. Which one do you want to use?'
 
 const predefinedAnswers = () => [SELECT_ANOTHER_ONE, CREATE_A_NEW_ONE]
-const isValidorEmptyPath = (filePath) => filePath === undefined ? true : filesystem.exists(filePath) 
-const actionToFileExist = (verification,file, action) => verification ? file : action()
+const isValidorEmptyPath = filePath => filePath ? filesystem.exists(filePath) : true
 
 const askInputKeystoreFilePath = async () => {
 	const filePath = await askSelectFilePath( PATH_TO_KEYSTORE)
@@ -36,7 +36,7 @@ const confirmPropertyFilePath = file => (
 const flowConfirmFilePath = async (file, message, askInput ) => {
 	const isValidFile = process.env.INTEGRATION_TEST  ? true : await askConfirmFilePath(message)
 	const verification = isValidFile && filesystem.exists(file)
-	return actionToFileExist(verification,file, askInput)
+	return verification ? file : askInput()
 }
 
 const initChoicesKeystoreFlow = choices => {
@@ -48,12 +48,16 @@ const initChoicesPropertyFlow = choices => {
 }
 
 const flowChooseFilePath = async (choices, askInput, message) => {
-	const populatedChoices = choices.concat(predefinedAnswers())
-	const selectedFile = await askChooseFilePath(populatedChoices, message)
-	return getFileResponse(askInput, selectedFile)
+	const chooseFilePathWithAnswers = R.pipe(
+		R.concat(choices),
+		askChooseFilePath(message),
+		R.then(response => getFileResponse(askInput,response)),
+	)
+	const filePath = await chooseFilePathWithAnswers(predefinedAnswers())
+	return filePath
 }
 
-const askChooseFilePath = async (choices, message) => {
+const askChooseFilePath =  R.curry(async (message, choices ) => {
 	const answer = await prompt.ask({
     name: 'selectedFile',
     type: 'select',
@@ -61,7 +65,7 @@ const askChooseFilePath = async (choices, message) => {
     choices: choices
 	})
 	return answer.selectedFile
-}
+})
 
 const askSelectFilePath = async (message) => {
 	const answer = await prompt.ask({
@@ -82,12 +86,12 @@ const askConfirmFilePath = async (message) => {
 	return answer.isValidFile
 }
 
-const getFileResponse = (fn, file ) => (
+const getFileResponse = R.curry((fn, file ) => (
 	matchCase(file)
     .on(x => x === SELECT_ANOTHER_ONE, () => fn())
     .on(x => x === CREATE_A_NEW_ONE, () => '')
 		.otherwise(x => filesystem.exists(file) ? file : fn())
-)
+))
 
 module.exports = {
 	askInputKeystoreFilePath,
