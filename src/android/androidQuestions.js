@@ -16,12 +16,12 @@ const predefinedAnswers = () => [SELECT_ANOTHER_ONE, CREATE_A_NEW_ONE]
 const isValidorEmptyPath = filePath => filePath ? filesystem.exists(filePath) : true
 
 const askInputKeystoreFilePath = async () => {
-	const filePath = await askSelectFilePath( PATH_TO_KEYSTORE)
+	const filePath =  process.env.INTEGRATION_TEST  ? '' : await askSelectFilePath( PATH_TO_KEYSTORE)
   return isValidorEmptyPath(filePath) ?  filePath : askInputKeystoreFilePath()
 }
 
 const askInputPropertyFilePath =  async () => {
-	const filePath = await askSelectFilePath(PATH_TO_PROPERTY)
+	const filePath =  process.env.INTEGRATION_TEST  ? '' : await askSelectFilePath(PATH_TO_PROPERTY)
 	return isValidorEmptyPath(filePath) ?  filePath : askInputPropertyFilePath()
 }
 

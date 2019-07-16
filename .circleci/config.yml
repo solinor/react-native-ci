@@ -6,7 +6,7 @@
 defaults: &defaults
   docker:
     # Choose the version of Node you want here
-    - image: circleci/node:10.11
+    - image: circleci/android:api-28-node 
   working_directory: ~/repo
 
 version: 2
@@ -14,6 +14,10 @@ jobs:
   setup:
     <<: *defaults
     steps:
+     # Debug with ssh 
+      - add_ssh_keys:
+          fingerprints:
+            - "SO:ME:FIN:G:ER:PR:IN:T"
       - checkout
       - restore_cache:
           name: Restore node modules
@@ -21,15 +25,31 @@ jobs:
             - v1-dependencies-{{ checksum "package.json" }}
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
+      - restore_cache:
+          name: Restore example_project node modules
+          keys:
+            -  v1-example-{{ checksum "example_project/package.json" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-example-
       - run:
           name: Install dependencies
           command: yarn install
+      - run:  
+          name: Intall dependencies for example project
+          command: cd example_project && yarn install
+      - run:
+          name: Change Permissions
+          command: sudo chown -R $(whoami) /usr/local
       - save_cache:
           name: Save node modules
           paths:
             - node_modules
           key: v1-dependencies-{{ checksum "package.json" }}
-
+      - save_cache:
+          name: Save node modules example_project
+          paths:
+            - example_project/node_modules
+          key: v1-example-{{ checksum "example_project/package.json" }}
 
   tests:
     <<: *defaults
@@ -41,9 +61,24 @@ jobs:
             - v1-dependencies-{{ checksum "package.json" }}
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
+      - restore_cache:
+          name: Restore example_project node modules
+          keys:
+            - v1-example-{{ checksum "example_project/package.json" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-example-
       - run:
           name: Change Permissions
           command: sudo chown -R $(whoami) /usr/local
+      - run:
+          name:  Update package list
+          command: sudo apt-get update
+      - run:
+          name: Install gems for Integration tests
+          command: sudo apt install ruby-full
+      - run:
+          name: Install fastlane
+          command: sudo gem install fastlane -NV
       - run:
           name: Run tests
           command: yarn ci:test # this command will be added to/found in your package.json scripts
@@ -59,6 +94,12 @@ jobs:
             - v1-dependencies-{{ checksum "package.json" }}
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
+    - restore_cache:
+        name: Restore example_project node modules
+        keys:
+          - v1-example-{{ checksum "example_project/package.json" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-example-
     # Run semantic-release after all the above is set.
     - run:
         name: Publish to NPM

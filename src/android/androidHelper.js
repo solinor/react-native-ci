@@ -125,11 +125,11 @@ const getVariableValueInDelimiter = (text, variable, preDelimiter, posDelimiter)
   return found
 }
 
-const retrieveValuesFromPropertiesVariables = async(commandPath) => {
+const retrieveValuesFromPropertiesVariables = async(path) => {
   const gradlewCmd = './gradlew properties' 
-  const command = x => x ? 
-  Result.Ok( `cd ${x} && ${gradlewCmd}`) :  Result.Error('no command')
-  const comm = findAndroidPath().chain(x => command(x)).getOrElse('')
+  const command = path => path ? 
+  Result.Ok( `cd ${path} && ${gradlewCmd}`) :  Result.Error('no command')
+  const comm = findAndroidPath().chain(cmd => command(cmd)).getOrElse('error on command')
   if (!comm) return undefined
  
   const gradlewProperties =  await strings.trim(await system.run(comm))
@@ -255,7 +255,7 @@ const createKeystore = async (options) => {
   const { name, storePassword, alias, aliasPassword, keystoreFile} = options
   const storeFile = keystoreFile != '' ? keystoreFile : `android/app/${name}-key.keystore`
   print.info('Generate new cert.')
-  const command = `keytool -genkey -v -keystore ${storeFile} -storepass ${storePassword} -alias ${alias} -keypass ${aliasPassword} -dname 'cn=Unknown, ou=Unknown, o=Unknown, c=Unknown' -keyalg RSA -keysize 2048 -validity 10000`
+  const command = `$(whereis keytool | awk '{print $NF }') -genkey -v -keystore ${storeFile} -storepass ${storePassword} -alias ${alias} -keypass ${aliasPassword} -dname 'cn=Unknown, ou=Unknown, o=Unknown, c=Unknown' -keyalg RSA -keysize 2048 -validity 10000`
   await system.run(command)
   const encodeCommand = `openssl base64 -A -in ${storeFile}`
   encodedKeystore = await system.run(encodeCommand)

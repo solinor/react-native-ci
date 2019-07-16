@@ -25,6 +25,7 @@ module.exports.runAndroid = async (toolbox, config) => {
   await initAndroid(toolbox, config)
   await initFastlane(toolbox)
   await setupGradle(toolbox, config)
+  return true
 }
 
 const askQuestions = async (prompt, options, android) => {
@@ -76,6 +77,7 @@ const initAndroid = async ({ android, prompt, print, circle, system, strings, fi
     keystoreAliasPassword : '',
     keystoreFile : '',
   }
+  
   if (!releaseSection) {
     print.info('Android requires that all APKs be digitally signed with a certificate before they are installed on a device or updated')
     //Explain why we need this and ask questions
@@ -85,17 +87,14 @@ const initAndroid = async ({ android, prompt, print, circle, system, strings, fi
     keystoreAnswers.keystoreAlias = keystoreAlias
     keystoreAnswers.keystoreAliasPassword = keystoreAliasPassword
   } else { //ReleaseSection exists. Try to retrieve the vales
-    const { keystoreFile,
-      keystoreAlias, 
-      keystorePassword, 
-      keystoreAliasPassword } = await retrieveValuesFromSection(releaseSection, filesystem, print)
-    keystoreAnswers.keystoreFile = keystoreFile
-    keystoreAnswers.keystorePassword = keystorePassword
-    keystoreAnswers.keystoreAlias = keystoreAlias
-    keystoreAnswers.keystoreAliasPassword = keystoreAliasPassword
+    const values = await retrieveValuesFromSection(releaseSection, filesystem, print)
+    keystoreAnswers.keystoreFile = values.keystoreFile
+    keystoreAnswers.keystorePassword = values.keystorePassword
+    keystoreAnswers.keystoreAlias = values.keystoreAlias
+    keystoreAnswers.keystoreAliasPassword = values.keystoreAliasPassword
   }
+  
   await setupKeystoreFile(android, print, circle,filesystem, prompt, options, keystoreAnswers)
-
   if (googleJsonPath !== '' && googleJsonPath !== undefined) {
     print.info('Store Google Play JSON to secret variables')
     const encodedPlayStoreJSON = android.base64EncodeJson(googleJsonPath)
@@ -146,8 +145,7 @@ const retrieveValuesFromSection = async (releaseSection, filesystem, print) => {
     values = retrieveValuesFromPropertyFile(releaseSection, filesystem)
   }
   if(!values || !values.keystoreAlias){
-    const pathCommand = 'cd android/'
-    values = retrieveValuesFromPropertiesVariables(pathCommand)
+    values = await retrieveValuesFromPropertiesVariables()
   }
   values ? propertiesSpinner.succeed('Got properties') : propertiesSpinner.failed('Failed trying to retrieve properties')
   return {keystoreAliasPassword, keystoreAlias, keystorePassword, keystoreFile} = values

@@ -1,11 +1,11 @@
 const {run} = require('../src/cli')
-
+const {runAndroid} = require('../src/flows/android')
 beforeAll(() => {
-  jest.setTimeout(10000) //Mandatory for API Request
+  jest.setTimeout(90000) //Gradle
   process.env.INTEGRATION_TEST = true}) 
 afterAll(() => {
-  jest.setTimeout(5000)
   process.env.INTEGRATION_TEST= false
+  jest.setTimeout(5000)
 }) //Back to normal
 describe('Options', () => {
   test('can start the cli', async () => {
@@ -13,12 +13,17 @@ describe('Options', () => {
     expect(c).toBeTruthy()
   })
  
-  test('android init', async done => {
-      const toolbox = await run()
-      const output = await toolbox.system.exec(`react-native-ci init --android --githubOrg company --repo xxxxx --circleApi 123456 --googleJsonPath ./ `)
-      expect(output).toMatch(/CircleCI/)
-      //TODO: Add more matches
-		done()
+  test('android init', async () => {
+    const config = {
+        githubOrg: "company",
+        repo: "internalCiProject",
+        circleApi: "123456",
+        googleJsonPath: "./",
+    }
+    const toolbox = await run()
+     // const output = await toolbox.system.exec(`react-native-ci init --android --githubOrg company --repo xxxxx --circleApi 123456 --googleJsonPath ./ `)
+    const output = await runAndroid(toolbox,config )
+    expect(output).toBe(true)
 	})
 	
 })

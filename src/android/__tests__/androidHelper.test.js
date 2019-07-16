@@ -1,5 +1,5 @@
 const { filesystem} = require('gluegun')
-const Maybe = require('folktale/maybe');
+const R = require('ramda')
 const { getConfigSection,
 	getValueFromProperty,
 	getValueAfterEqual,
@@ -18,9 +18,11 @@ const { getConfigSection,
 
  const no_release = filesystem.read('src/android/__mocks__/no-release-build.gradle')
  const gradle = filesystem.read('src/android/__mocks__/build.gradle')
-
+ beforeAll(() => {
+	jest.setTimeout(60000) //Mandatory for API Request
+	process.env.INTEGRATION_TEST = true}) 
 beforeEach(() => {
-	properties = filesystem.read('./exampleProject/android/app/internalCiProject-keystore.properties')
+	properties = filesystem.read('./example_project/android/app/internalCiProject-keystore.properties')
 });
 
 describe('Config Section', () => {
@@ -29,14 +31,14 @@ describe('Config Section', () => {
 		expect(output).toBe('')
 	})
 
-	// test('find build.gradle file', async () => {
-	// 	const output = readGradleFile().getOrElse('')
-	// 	expect(output).not.toBe()
-	// })  
+	test('find build.gradle file', async () => {
+		const output = readGradleFile().getOrElse('')
+		expect(output).not.toBe()
+	})  
 	
 	test('find path for gradwle command', async () => {
 		const output = findAndroidPath().getOrElse('')
-		expect(output).toBe('exampleProject/android/')
+		expect(output).toBe('example_project/android/')
 	})   
 
 	test('build.gradle getConfigSection contains signingConfigs', async () => {
@@ -87,13 +89,15 @@ describe('Config Section', () => {
 	})
 
 	test('find keystore file', async () => {
-		const output = findKeystoreFiles('./exampleProject')
+		const output = findKeystoreFiles('./example_project')
 		expect(output).toHaveLength(2)
 	})
 
 	test('find properties file', async () => {
-		const output = findPropertiesFiles('./exampleProject')
-		expect(output).toHaveLength(3)
+		const output = findPropertiesFiles('./example_project')
+		//Output can contains local.properties but these will fail in CI because it is added to .gitignore
+		const filtered = output.filter(R.complement(R.contains('local.properties')))
+		expect(filtered).toHaveLength(2)
 	})
 
 	test('findPropertiesPath', async () =>{
@@ -198,9 +202,7 @@ describe('Config Section', () => {
 	)
 
 	test('retrieve values from properties values gradlew command', async () =>{
-		const commandPath = 'cd ./exampleProject/android/'
-		const values = await retrieveValuesFromPropertiesVariables(commandPath)
-		expect(values['keystoreAlias']).toBe('app')
+		const values = await retrieveValuesFromPropertiesVariables()
 		expect(values['keystoreAliasPassword']).toBe('123456')
 		expect(values['keystorePassword']).toBe('123456')
 		expect(values['keystoreFile']).toBe('../internalProject-key.keystore')

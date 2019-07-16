@@ -25,12 +25,12 @@ afterAll(() => io.restore())
 describe('Ask Keystore questions', () => {
 	test('validate file path ', async done => {
 		const sendKeystrokes = async () => {
-			io.send('exampleProject/android/internalProject-key.keystore')
+			io.send('example_project/android/internalProject-key.keystore')
 			io.send(keys.enter)
 		}
 		setTimeout(() => sendKeystrokes().then(), 5)
 		const result = await askInputKeystoreFilePath()
-		expect(result).toEqual('exampleProject/android/internalProject-key.keystore')
+		expect(result).toEqual('example_project/android/internalProject-key.keystore')
 		done()
 	})
 
@@ -47,17 +47,17 @@ describe('Ask Keystore questions', () => {
 
 	test('Validate a keystore file path after typing an nonexistent one ', async done => {
 		const sendKeystrokes = async () => {
-			io.send('exampleProject/android/internalProject-key.keystore1')
+			io.send('example_project/android/internalProject-key.keystore1')
 			io.send(keys.enter)
 			await delay(10)
-			io.send('exampleProject/android/internalProject-key.keystore')
+			io.send('example_project/android/internalProject-key.keystore')
 			io.send(keys.enter)
 			await(10)
 		}
 		setTimeout(() => sendKeystrokes().then(), 5)
 		const result = await askInputKeystoreFilePath()
 		
-		expect(result).toEqual('exampleProject/android/internalProject-key.keystore')
+		expect(result).toEqual('example_project/android/internalProject-key.keystore')
 		done()
 	})
 
@@ -66,8 +66,8 @@ describe('Ask Keystore questions', () => {
 		  	io.send(keys.enter)
 			}
 		setTimeout(() => sendKeystrokes().then(), 5)
-		const result = await confirmKeyStoreFilePath('exampleProject/android/internalProject-key.keystore')
-		expect(result).toEqual('exampleProject/android/internalProject-key.keystore')
+		const result = await confirmKeyStoreFilePath('example_project/android/internalProject-key.keystore')
+		expect(result).toEqual('example_project/android/internalProject-key.keystore')
 		done()
 	})
 
@@ -76,45 +76,45 @@ describe('Ask Keystore questions', () => {
 			io.send('no')
 			io.send(keys.enter)
 			await delay(10)
-			io.send('exampleProject/android/internalProject-key.keystore')
+			io.send('example_project/android/internalProject-key.keystore')
 			io.send(keys.enter)
 		}
 		setTimeout(() => sendKeystrokes().then(), 5)
-		const result = await confirmKeyStoreFilePath('exampleProject/android/internalProject-key.keystore')
-		expect(result).toEqual('exampleProject/android/internalProject-key.keystore')
+		const result = await confirmKeyStoreFilePath('example_project/android/internalProject-key.keystore')
+		expect(result).toEqual('example_project/android/internalProject-key.keystore')
 		done()
 	})
 
 	test('Select second item from keystore list ', async done => {
-		const choices = ['exampleProject/android/example-key.keystore','exampleProject/android/internalProject-key.keystore']
+		const choices = ['example_project/android/example-key.keystore','example_project/android/internalProject-key.keystore']
 		const sendKeystrokes = async () => {
 			io.send(keys.down)
 			io.send(keys.enter)
 		}
 		setTimeout(() => sendKeystrokes().then(), 5)
 		const result = await initChoicesKeystoreFlow(choices)
-		expect(result).toEqual('exampleProject/android/internalProject-key.keystore')
+		expect(result).toEqual('example_project/android/internalProject-key.keystore')
 		done()
 	})
 
 	test('Select `another one` (third option) from keystore list ', async done => {
-		const choices = ['exampleProject/android/example-key.keystore1','exampleProject/android/internalProject-key.keystore2']
+		const choices = ['example_project/android/example-key.keystore1','example_project/android/internalProject-key.keystore2']
 		const sendKeystrokes = async () => {
 			io.send(keys.down)
 			io.send(keys.down)
 			io.send(keys.enter)
 			await delay(10)
-			io.send('exampleProject/android/internalProject-key.keystore')
+			io.send('example_project/android/internalProject-key.keystore')
 			io.send(keys.enter)
 		}
 		setTimeout(() => sendKeystrokes().then(), 5)
 		const result = await initChoicesKeystoreFlow(choices)
-		expect(result).toEqual('exampleProject/android/internalProject-key.keystore')
+		expect(result).toEqual('example_project/android/internalProject-key.keystore')
 		done()
 	})
 
 	test('Select `create one` from keystore list ', async done => {
-		const choices = ['exampleProject/android/example-key.keystore1','exampleProject/android/internalProject-key.keystore2']
+		const choices = ['example_project/android/example-key.keystore1','example_project/android/internalProject-key.keystore2']
 		const sendKeystrokes = async () => {
 			io.send(keys.down)
 			io.send(keys.down)
@@ -131,15 +131,15 @@ describe('Ask Keystore questions', () => {
 describe('Ask Property file questions', () => {
 	test('validate property file path ', async done => {
 		const sendKeystrokes = async () => {
-				io.send('exampleProject/android/anotherfolder/gradle.properties')
+				io.send('example_project/android/folder/gradle.properties')
 				io.send(keys.enter)
 			}
-			setTimeout(() => sendKeystrokes().then(), 5)
+		setTimeout(() => sendKeystrokes().then(), 5)
 		const result = await askInputPropertyFilePath()
-		expect(result).toEqual('exampleProject/android/anotherfolder/gradle.properties')
+		expect(result).toEqual('example_project/android/folder/gradle.properties')
 		done()
 	})
-
+	
 	test('Create a new property file ', async done => {
 		const sendKeystrokes = async () => {
 				io.send()
@@ -153,16 +153,16 @@ describe('Ask Property file questions', () => {
 
 	test('Validate a property file path after typing an nonexistent one  ', async done => {
 		const sendKeystrokes = async () => {
-			io.send('exampleProject/android/gradle.properties1')
+			io.send('example_project/android/gradle.properties1')
 			io.send(keys.enter)
 			await delay(10)
-			io.send('exampleProject/android/gradle.properties')
+			io.send('example_project/android/gradle.properties')
 			io.send(keys.enter)
 		}
 		setTimeout(() => sendKeystrokes().then(), 5)
 		const result = await askInputPropertyFilePath()
 		
-		expect(result).toEqual('exampleProject/android/gradle.properties')
+		expect(result).toEqual('example_project/android/gradle.properties')
 		done()
 	})
 
@@ -171,8 +171,8 @@ describe('Ask Property file questions', () => {
 			io.send(keys.enter)
 		}
 		setTimeout(() => sendKeystrokes().then(), 5)
-		const result = await confirmPropertyFilePath('exampleProject/android/gradle.properties')
-		expect(result).toEqual('exampleProject/android/gradle.properties')
+		const result = await confirmPropertyFilePath('example_project/android/gradle.properties')
+		expect(result).toEqual('example_project/android/gradle.properties')
 		done()
 	})
 
@@ -181,46 +181,46 @@ describe('Ask Property file questions', () => {
 			io.send('n')
 			io.send(keys.enter)
 			await delay(10)
-			io.send('exampleProject/android/gradle.properties')
+			io.send('example_project/android/gradle.properties')
 			io.send(keys.enter)
 		}
 		setTimeout(() => sendKeystrokes().then(), 5)
-		const result = await confirmPropertyFilePath('exampleProject/android/gradle.properties')
-		expect(result).toEqual('exampleProject/android/gradle.properties')
+		const result = await confirmPropertyFilePath('example_project/android/gradle.properties')
+		expect(result).toEqual('example_project/android/gradle.properties')
 		done()
 	})
 
 	test('Select second item from property list ', async done => {
-		const choices = ['exampleProject/android/gradle.properties','exampleProject/android/gradle.properties']
+		const choices = ['example_project/android/gradle.properties','example_project/android/gradle.properties']
 		const sendKeystrokes = async () => {
 			io.send(keys.down)
 			io.send(keys.enter)
 		}
 		setTimeout(() => sendKeystrokes().then(), 5)
 		const result = await initChoicesPropertyFlow(choices)
-		expect(result).toEqual('exampleProject/android/gradle.properties')
+		expect(result).toEqual('example_project/android/gradle.properties')
 		done()
 	})
 
 	test('Select `another one` (third option) from property list', async done => {
-		const choices = ['exampleProject/android/gradle.properties1','exampleProject/android/gradle.properties2']
+		const choices = ['example_project/android/gradle.properties1','example_project/android/gradle.properties2']
 		const sendKeystrokes = async () => {
 			io.send(keys.down)
 			io.send(keys.down)
 			io.send(keys.enter)
 			await delay(10)
-			io.send('exampleProject/android/gradle.properties')
+			io.send('example_project/android/gradle.properties')
 			io.send(keys.enter)
 	
 		}
 		setTimeout(() => sendKeystrokes().then(), 5)
 		const result = await initChoicesPropertyFlow(choices)
-		expect(result).toEqual('exampleProject/android/gradle.properties')
+		expect(result).toEqual('example_project/android/gradle.properties')
 		done()
 	})
 
 	test('Select `create one` from property list', async done => {
-		const choices = ['exampleProject/android/gradle.properties1','exampleProject/android/gradle.properties2']
+		const choices = ['example_project/android/gradle.properties1','example_project/android/gradle.properties2']
 		const sendKeystrokes = async () => {
 			io.send(keys.down)
 			io.send(keys.down)
