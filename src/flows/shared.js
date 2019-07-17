@@ -1,9 +1,3 @@
-module.exports.runShared = async (toolbox, config) =>  {
-  const answers = await askQuestions(toolbox, config)
-  await initCircleCI(toolbox, { ...config, ...answers })
-  return answers
-}
-
 const askQuestions = async ({ prompt }, options) => {
   // text input
   const askOrganization = {
@@ -12,9 +6,9 @@ const askQuestions = async ({ prompt }, options) => {
     skip: () => options.githubOrg,
     name: 'githubOrg',
     message: 'Your github organization?',
-    validate(value = '') {
+    validate (value = '') {
       return value === '' ? `Your github organization can't be empty` : true
-    },
+    }
   }
   const askProject = {
     type: 'input',
@@ -39,7 +33,7 @@ const askQuestions = async ({ prompt }, options) => {
   }
 }
 
-const initCircleCI = async ({ template, prompt, print, http, android, circle }, { githubOrg, repo, circleApi }) => {
+const initCircleCI = async ({ template, http }, { githubOrg, repo, circleApi }) => {
   await template.generate({
     template: 'circleci/config.yml',
     target: '.circleci/config.yml',
@@ -50,8 +44,13 @@ const initCircleCI = async ({ template, prompt, print, http, android, circle }, 
     baseURL: 'https://circleci.com/api/v1.1/'
   })
 
-  const { status } = await api.post(
+  await api.post(
     `project/github/${githubOrg}/${repo}/follow?circle-token=${circleApi}`
   )
+}
 
+module.exports.runShared = async (toolbox, config) => {
+  const answers = await askQuestions(toolbox, config)
+  await initCircleCI(toolbox, { ...config, ...answers })
+  return answers
 }

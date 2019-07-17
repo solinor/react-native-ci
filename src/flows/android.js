@@ -1,32 +1,25 @@
-const { 
-  geFirstWordsFromSection, 
-  getValueAfterEqual, 
-  getFirstAZWordFromSection, 
-  getVariableValueInDelimiter, 
-  findKeystoreFiles, 
-  findPropertiesFiles, 
+const {
+  geFirstWordsFromSection,
+  getValueAfterEqual,
+  getFirstAZWordFromSection,
+  getVariableValueInDelimiter,
+  findKeystoreFiles,
+  findPropertiesFiles,
   findPropertiesPath,
   replaceDotSlash,
   readGradleFile,
   retrieveHardcodedProperties,
-  retrieveValuesFromPropertiesVariables,
+  retrieveValuesFromPropertiesVariables
 } = require('../android/androidHelper')
-const { 
+const {
   askInputKeystoreFilePath,
   confirmKeyStoreFilePath,
   initChoicesKeystoreFlow,
   askInputPropertyFilePath,
   confirmPropertyFilePath,
-  initChoicesPropertyFlow,
+  initChoicesPropertyFlow
 } = require('../android/androidQuestions')
 const { matchCase } = require('../utils/functional')
-
-module.exports.runAndroid = async (toolbox, config) => {
-  await initAndroid(toolbox, config)
-  await initFastlane(toolbox)
-  await setupGradle(toolbox, config)
-  return true
-}
 
 const askQuestions = async (prompt, options, android) => {
   const askGooglePlayJSONPath = {
@@ -41,7 +34,7 @@ const askQuestions = async (prompt, options, android) => {
 }
 
 const askKeystoreQuestions = async (prompt, options) => {
-   const  askKeystorePassword = {
+  const askKeystorePassword = {
     type: 'password',
     initial: options.keystorePassword,
     skip: () => options.keystorePassword,
@@ -67,34 +60,34 @@ const askKeystoreQuestions = async (prompt, options) => {
   return answers
 }
 
-const initAndroid = async ({ android, prompt, print, circle, system, strings, filesystem}, options) => {
+const initAndroid = async ({ android, prompt, print, circle, system, strings, filesystem }, options) => {
   const { githubOrg, repo, circleApi } = options
-  const { googleJsonPath}  = await askQuestions(prompt, options, android)
+  const { googleJsonPath } = await askQuestions(prompt, options, android)
   const releaseSection = android.getConfigSection(['signingConfigs', 'release'])
   const keystoreAnswers = {
-    keystoreAlias : '',
-    keystorePassword : '',
-    keystoreAliasPassword : '',
-    keystoreFile : '',
+    keystoreAlias: '',
+    keystorePassword: '',
+    keystoreAliasPassword: '',
+    keystoreFile: ''
   }
-  
+
   if (!releaseSection) {
     print.info('Android requires that all APKs be digitally signed with a certificate before they are installed on a device or updated')
-    //Explain why we need this and ask questions
-    const { keystoreAlias, keystorePassword , keystoreAliasPassword }  = await askKeystoreQuestions(prompt, options)
+    // Explain why we need this and ask questions
+    const { keystoreAlias, keystorePassword, keystoreAliasPassword } = await askKeystoreQuestions(prompt, options)
     keystoreAnswers.keystoreFile = ''
     keystoreAnswers.keystorePassword = keystorePassword
     keystoreAnswers.keystoreAlias = keystoreAlias
     keystoreAnswers.keystoreAliasPassword = keystoreAliasPassword
-  } else { //ReleaseSection exists. Try to retrieve the vales
+  } else { // ReleaseSection exists. Try to retrieve the vales
     const values = await retrieveValuesFromSection(releaseSection, filesystem, print)
     keystoreAnswers.keystoreFile = values.keystoreFile
     keystoreAnswers.keystorePassword = values.keystorePassword
     keystoreAnswers.keystoreAlias = values.keystoreAlias
     keystoreAnswers.keystoreAliasPassword = values.keystoreAliasPassword
   }
-  
-  await setupKeystoreFile(android, print, circle,filesystem, prompt, options, keystoreAnswers)
+
+  await setupKeystoreFile(android, print, circle, filesystem, prompt, options, keystoreAnswers)
   if (googleJsonPath !== '' && googleJsonPath !== undefined) {
     print.info('Store Google Play JSON to secret variables')
     const encodedPlayStoreJSON = android.base64EncodeJson(googleJsonPath)
@@ -111,16 +104,16 @@ const initAndroid = async ({ android, prompt, print, circle, system, strings, fi
 const retrieveValuesFromPropertyFile = (releaseSection, filesystem) => {
   const gradle = readGradleFile().getOrElse('')
   const propertiesLocation = gradle ? findPropertiesPath(gradle) : undefined
-  let values = undefined
-  if (propertiesLocation){
+  let values
+  if (propertiesLocation) {
     const dictGradle = geFirstWordsFromSection(releaseSection)
     const replaceWithAndroidPath = replaceDotSlash('./android/')
     const replaceAndroid = propertiesLocation.map(replaceWithAndroidPath)
     const filteredFs = replaceAndroid.filter(path => path && filesystem.exists(path))
     if (!filteredFs || filteredFs.length === 0) return undefined
-    let dictionary = {}
-    dictGradle.forEach((dictValue) => { 
-      const value = getValueAfterEqual(filesystem.read(filteredFs[0]),dictValue.value).getOrElse('')
+    const dictionary = {}
+    dictGradle.forEach((dictValue) => {
+      const value = getValueAfterEqual(filesystem.read(filteredFs[0]), dictValue.value).getOrElse('')
       dictionary[dictValue.key] = value
     })
     const keystoreFile = dictionary['storeFile']
@@ -132,23 +125,22 @@ const retrieveValuesFromPropertyFile = (releaseSection, filesystem) => {
       keystoreAlias,
       keystorePassword,
       keystoreFile: keystoreFile
-    } 
+    }
   }
-  return values 
+  return values
 }
 
 const retrieveValuesFromSection = async (releaseSection, filesystem, print) => {
- 
   const propertiesSpinner = print.spin('Trying to retrieve signing information...')
   let values = retrieveHardcodedProperties(releaseSection)
-  if (!values || !values.keystoreAlias){
+  if (!values || !values.keystoreAlias) {
     values = retrieveValuesFromPropertyFile(releaseSection, filesystem)
   }
-  if(!values || !values.keystoreAlias){
+  if (!values || !values.keystoreAlias) {
     values = await retrieveValuesFromPropertiesVariables()
   }
   values ? propertiesSpinner.succeed('Got properties') : propertiesSpinner.failed('Failed trying to retrieve properties')
-  return {keystoreAliasPassword, keystoreAlias, keystorePassword, keystoreFile} = values
+  return values
 }
 
 const initFastlane = async ({ system, android, template, filesystem, print }) => {
@@ -186,10 +178,10 @@ const initFastlane = async ({ system, android, template, filesystem, print }) =>
 }
 
 const setupGradle = async ({ android, patching }, { repo }) => {
- const releaseSection = android.getConfigSection(['signingConfigs', 'release'])
- if (releaseSection) {
-   return
- }
+  const releaseSection = android.getConfigSection(['signingConfigs', 'release'])
+  if (releaseSection) {
+    return
+  }
   const GRADLE_FILE_PATH = 'android/app/build.gradle'
   await patching.replace(
     GRADLE_FILE_PATH,
@@ -274,65 +266,65 @@ keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 const setupKeystoreFile = async (android, print, circle, filesystem, prompt, options, keystoreAnswers) => {
   const { githubOrg, repo, circleApi } = options
   // const { keystoreAlias, keystorePassword , keystoreAliasPassword }  = await askKeystoreQuestions(prompt, options)
-  const { keystoreAlias, keystorePassword , keystoreAliasPassword, keystoreFile } = keystoreAnswers
+  const { keystoreAlias, keystorePassword, keystoreAliasPassword, keystoreFile } = keystoreAnswers
   let alias = keystoreAlias
   let password = keystorePassword
   let aliasPassword = keystoreAliasPassword
   let storeFile = keystoreFile
-  if (!storeFile || filesystem.read(storeFile)){
+  if (!storeFile || filesystem.read(storeFile)) {
     storeFile = ''
   }
-  
-  if (storeFile === '') { 
+
+  if (storeFile === '') {
     const file = await matchCase(findKeystoreFiles())
-    .on(x => x.length === 0, () => askInputKeystoreFilePath())
-    .on(x => x.length === 1, (x) => confirmKeyStoreFilePath(x.pop()))
-    .otherwise(x => initChoicesKeystoreFlow(x))
-    if (file && filesystem.read(file)){
+      .on(x => x.length === 0, () => askInputKeystoreFilePath())
+      .on(x => x.length === 1, (x) => confirmKeyStoreFilePath(x.pop()))
+      .otherwise(x => initChoicesKeystoreFlow(x))
+    if (file && filesystem.read(file)) {
       storeFile = file
-    }else{
+    } else {
       storeFile = ''
     }
-  } 
-  let keyStoreProperties = undefined 
-  if( !alias || !password || !aliasPassword ){
-    const releaseSection = android.getConfigSection(['signingConfigs', 'release']) 
-    
-    keyStoreProperties =  await matchCase(findPropertiesFiles())
-    .on(x => x.length === 0, () => askInputPropertyFilePath())
-    .on(x => x.length === 1, (x) => confirmPropertyFilePath(x.pop()))
-    .otherwise(x => initChoicesPropertyFlow(x))
-    if(!keyStoreProperties){
-      const { keystoreAlias, keystorePassword , keystoreAliasPassword }  = await askKeystoreQuestions()
+  }
+  let keyStoreProperties
+  if (!alias || !password || !aliasPassword) {
+    const releaseSection = android.getConfigSection(['signingConfigs', 'release'])
+
+    keyStoreProperties = await matchCase(findPropertiesFiles())
+      .on(x => x.length === 0, () => askInputPropertyFilePath())
+      .on(x => x.length === 1, (x) => confirmPropertyFilePath(x.pop()))
+      .otherwise(x => initChoicesPropertyFlow(x))
+    if (!keyStoreProperties) {
+      const { keystoreAlias, keystorePassword, keystoreAliasPassword } = await askKeystoreQuestions()
       alias = keystoreAlias
       password = keystorePassword
       aliasPassword = keystoreAliasPassword
-    }else{
+    } else {
       const file = filesystem.read(keyStoreProperties)
       const variables = getFirstAZWordFromSection(releaseSection)
-      let dictionary = {}
-      variables.forEach((variable) => { 
-        const variableInBracket = getVariableValueInDelimiter(releaseSection,variable,'[',']')
-        const value = getValueAfterEqual(file,variableInBracket)
+      const dictionary = {}
+      variables.forEach((variable) => {
+        const variableInBracket = getVariableValueInDelimiter(releaseSection, variable, '[', ']')
+        const value = getValueAfterEqual(file, variableInBracket)
         dictionary[variable] = value
       })
-      //Get variables
+      // Get variables
       storeFile = dictionary['storeFile']
       password = dictionary['storePassword']
       alias = dictionary['keyAlias']
       aliasPassword = dictionary['keyPassword']
     }
   }
-  
+
   const keystoreFiles = await android.getKeystore({
     name: repo,
     storePassword: password,
     alias: alias,
     aliasPassword: aliasPassword,
     keystoreFile: storeFile,
-    keyStoreProperties: keyStoreProperties || '' ,
+    keyStoreProperties: keyStoreProperties || ''
   })
-  
+
   print.info('Store keystore to secret variables')
   circle.postEnvVariable({
     githubOrg,
@@ -341,7 +333,7 @@ const setupKeystoreFile = async (android, print, circle, filesystem, prompt, opt
     key: 'KEYSTORE',
     value: keystoreFiles.encodedKeystore
   })
-  
+
   print.info('Store keystore properties to secret variables')
   circle.postEnvVariable({
     githubOrg,
@@ -350,4 +342,11 @@ const setupKeystoreFile = async (android, print, circle, filesystem, prompt, opt
     key: 'KEYSTORE_PROPERTIES',
     value: keystoreFiles.keystoreProperties
   })
+}
+
+module.exports.runAndroid = async (toolbox, config) => {
+  await initAndroid(toolbox, config)
+  await initFastlane(toolbox)
+  await setupGradle(toolbox, config)
+  return true
 }

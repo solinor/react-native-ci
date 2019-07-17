@@ -1,13 +1,11 @@
+const { runShared } = require('../flows/shared')
+const { runAndroid } = require('../flows/android')
+const { runIOS } = require('../flows/ios')
+
 module.exports = {
   name: 'init',
   alias: ['i'],
   run: async toolbox => {
-
-    const { runShared } = require('../flows/shared')
-    const { runAndroid } = require('../flows/android')
-    const { runIOS } = require('../flows/ios')
-
-    const { print: { info } } = toolbox
     let { ci, android, ios } = toolbox.parameters.options
     if (!ci && !android && !ios) {
       ci = true
@@ -27,7 +25,7 @@ module.exports = {
       await runAndroid(toolbox, { ...defaultConfig, ...sharedConfig })
     }
     if (ios) {
-      await runIOS(toolbox, { ...defaultConfig, ...sharedConfig })
+      await runIOS(toolbox, { ...defaultConfig, ...sharedConfig })
     }
   }
 }

@@ -1,18 +1,16 @@
-const fs = require('fs')
 const { getConfigSection, createKeystore, readGradleFile } = require('../android/androidHelper')
 
 // add your CLI-specific functionality here, which will then be accessible
 // to your commands
 module.exports = toolbox => {
-  toolbox.android = {
+  toolbox.android = { // eslint-disable-line no-param-reassign
     getApplicationId: () => {
       const {
-        filesystem,
         print: { info }
       } = toolbox
 
       let applicationId = ''
-      const gradle =  readGradleFile().getOrElse('')
+      const gradle = readGradleFile().getOrElse('')
       const lines = gradle.split('\n')
       lines.forEach((line) => {
         const isAppId = line.includes('applicationId "')
@@ -20,16 +18,12 @@ module.exports = toolbox => {
           const start = line.indexOf('"') + 1
           const end = line.lastIndexOf('"')
           applicationId = line.substring(start, end)
-          info('found applicationId line: ' + applicationId)
+          info(`found applicationId line: ${applicationId}`)
         }
       })
       return applicationId
     },
     getBuildGradle: () => {
-      const {
-        filesystem,
-      } = toolbox
-
       const gradle = readGradleFile().getOrElse('')
       return gradle
     },
@@ -39,8 +33,7 @@ module.exports = toolbox => {
     },
     isLibraryLinked: (libraryName) => {
       const {
-        filesystem,
-        print: { info }
+        filesystem
       } = toolbox
 
       let isLinked = false
@@ -59,9 +52,9 @@ module.exports = toolbox => {
         template,
         print
       } = toolbox
-      const { name, storePassword, alias, aliasPassword, keystoreFile, keyStoreProperties} = options
+      const { name, storePassword, alias, keystoreFile, keyStoreProperties } = options
       let properties = keyStoreProperties
-      const storeFilePath = keystoreFile != '' ? keystoreFile : `android/app/${name}-key.keystore`
+      const storeFilePath = keystoreFile !== '' ? keystoreFile : `android/app/${name}-key.keystore`
       print.info('Checking if CircleCI keystore already exists')
       const checkKeyStore = `$(whereis keytool | awk '{print $NF}') -v -list -keystore ${storeFilePath} -storepass ${storePassword} -alias ${alias}`
       let keystore
@@ -76,17 +69,17 @@ module.exports = toolbox => {
       if (!keystore) {
         encodedKeystore = createKeystore(options)
       }
-      if(!properties){
+      if (!properties) {
         properties = await template.generate({
           template: 'keystore.properties',
           target: `android/app/${name}-keystore.properties`,
-          props: { 
-            ...options, 
+          props: {
+            ...options,
             keystoreFile: keystoreFile || name,
             name: name.toUpperCase()
           }
         })
-      }else{
+      } else {
         print.info(`Existing keystore.properties found.`)
       }
       return {
