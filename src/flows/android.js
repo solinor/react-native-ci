@@ -1,9 +1,3 @@
-module.exports.runAndroid = async (toolbox, config) => {
-  await initAndroid(toolbox, config)
-  await initFastlane(toolbox)
-  await setupGradle(toolbox, config)
-}
-
 const askQuestion = async (prompt, options) => {
   const askGooglePlayJSONPath = {
     type: 'input',
@@ -14,13 +8,11 @@ const askQuestion = async (prompt, options) => {
   }
   const { googleJsonPath } = await prompt.ask(askGooglePlayJSONPath)
   return {
-    googleJsonPath: options.googleJsonPath,
     googleJsonPath
   }
 }
 
-const initAndroid = async ({ android, http, prompt, print, circle }, options) => {
-
+const initAndroid = async ({ android, prompt, print, circle }, options) => {
   const { githubOrg, repo, circleApi } = options
   const { googleJsonPath } = await askQuestion(prompt, options)
 
@@ -62,7 +54,7 @@ const initAndroid = async ({ android, http, prompt, print, circle }, options) =>
   }
 }
 
-const initFastlane = async ({ system, android, template, filesystem, print }) => {
+const initFastlane = async ({ system, android, template, print }) => {
   const fastlanePath = system.which('fastlane')
   if (!fastlanePath) {
     print.info('No fastlane found, install...')
@@ -96,7 +88,7 @@ const initFastlane = async ({ system, android, template, filesystem, print }) =>
   })
 }
 
-const setupGradle = async ({ android, patching }, { repo }) => {
+const setupGradle = async ({ patching }, { repo }) => {
   const GRADLE_FILE_PATH = 'android/app/build.gradle'
   await patching.replace(
     GRADLE_FILE_PATH,
@@ -176,4 +168,10 @@ keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
       after: releaseType
     }
   )
+}
+
+module.exports.runAndroid = async (toolbox, config) => {
+  await initAndroid(toolbox, config)
+  await initFastlane(toolbox)
+  await setupGradle(toolbox, config)
 }

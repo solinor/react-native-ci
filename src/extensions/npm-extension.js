@@ -1,8 +1,8 @@
 const install = require('install-packages')
 
 module.exports = toolbox => {
-  toolbox.npm = {
-    isPackageInstalled: function(packageName) {
+  toolbox.npm = { // eslint-disable-line no-param-reassign
+    isPackageInstalled (packageName) {
       const {
         filesystem
       } = toolbox
@@ -17,12 +17,12 @@ module.exports = toolbox => {
       })
       return isInstalled
     },
-    installPackage: function async (packageName, saveDependency = true, saveDevDependency = false) {
+    installPackage: function async (packageName, saveDevDependency = false) {
       return install({
-          packages: [packageName],
-          saveDev: saveDevDependency,
-          packageManager: 'npm'
-        })
+        packages: [packageName],
+        saveDev: saveDevDependency,
+        packageManager: 'npm'
+      })
     },
     addPackageScript: (script) => {
       const {
@@ -48,15 +48,12 @@ module.exports = toolbox => {
       } = toolbox
       try {
         const packaged = filesystem.read('package.json', 'json')
-        //if (!packaged.xcodeSchemes) packaged.xcodeSchemes = {}
+        // if (!packaged.xcodeSchemes) packaged.xcodeSchemes = {}
         packaged[section.key] = section.value
         filesystem.write('package.json', packaged, { jsonIndent: 2 })
       } catch (e) {
         print.error(e)
       }
-
     }
   }
-
-
 }

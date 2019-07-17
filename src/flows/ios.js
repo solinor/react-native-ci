@@ -1,15 +1,3 @@
-module.exports.runIOS = async (toolbox, config) => {
-  const input = await getInput(toolbox, config)
-  await initFastlane(toolbox, {
-    ...config,
-    ...input
-  })
-  await initXcode(toolbox, {
-    ...config,
-    ...input
-  })
-}
-
 const initXcode = async (
   { print: { spin }, template, npm, system, ios },
   config
@@ -73,17 +61,40 @@ const initXcode = async (
   spinner.succeed('react-native-schemes-manager installed..')
 }
 
+const promptForTeamId = async (teams, iTunesTeamId, { message, multiMessage }, prompt) => {
+  if (teams.length > 1) {
+    const { teamId } = await prompt.ask({
+      type: 'select',
+      name: 'teamId',
+      choices: teams.map(team => {
+        return {
+          name: team.id,
+          message: `${team.name} (${team.id})`
+        }
+      }),
+      message: multiMessage
+    })
+    return teamId
+  } if (teams.length === 1) {
+    return teams[0]
+  }
+  const { teamId } = await prompt.ask({
+    type: 'input',
+    initial: iTunesTeamId,
+    name: 'teamId',
+    message
+  })
+  return teamId
+}
+
 const initFastlane = async (
   {
     ios,
     system,
     template,
-    filesystem,
-    http,
     circle,
-    prompt,
     print,
-    print: { info, spin, success }
+    print: { spin, success }
   },
   options
 ) => {
@@ -137,7 +148,9 @@ const initFastlane = async (
     }
   })
 
-  await system.run(`fastlane fastlane-credentials add --username ${options.developerAccount} --password ${options.developerPassword}`)
+  await system.run(`fastlane fastlane-credentials add ` +
+  `--username ${options.developerAccount} ` +
+  `--password ${options.developerPassword}`)
 
   await ios.produceApp({
     appId,
@@ -188,7 +201,7 @@ const initFastlane = async (
 }
 
 const getInput = async (
-  { system, filesystem, prompt, ios, print },
+  { filesystem, prompt, ios, print },
   options
 ) => {
   const xcodeProjectName = filesystem.find('ios/', {
@@ -215,15 +228,17 @@ const getInput = async (
     }
   ])
   const { developerAccount, developerPassword } = {
-    developerAccount: devAnswers.developerAccount ? devAnswers.developerAccount : options.developerAccount,
-    developerPassword: devAnswers.developerPassword ? devAnswers.developerPassword : options.developerPassword
-  } 
+    developerAccount: devAnswers.developerAccount
+      ? devAnswers.developerAccount : options.developerAccount,
+    developerPassword: devAnswers.developerPassword
+      ? devAnswers.developerPassword : options.developerPassword
+  }
 
-  let developerTeamId = options.iTunesTeamId;
-  let iTunesTeamId = options.appConnectTeamId;
+  let developerTeamId = options.iTunesTeamId
+  let iTunesTeamId = options.appConnectTeamId
   if (!developerTeamId || !iTunesTeamId) {
-    let itcTeams = []
-    let devTeams = []
+    const itcTeams = []
+    const devTeams = []
     const teamSpinner = print.spin('Trying to find your Apple teams..')
     try {
       const teams = await ios.getTeamIds({
@@ -234,11 +249,11 @@ const getInput = async (
       devTeams.push(...teams.devTeams)
     } catch (error) {
       teamSpinner.fail(error)
-      print.error('there was an error: ' + error)
+      print.error(`there was an error: ${error}`)
       process.exit(0)
     }
     teamSpinner.succeed('Apple teams search successful')
-  
+
     developerTeamId = await promptForTeamId(
       devTeams,
       {
@@ -247,7 +262,7 @@ const getInput = async (
       },
       prompt
     )
-  
+
     iTunesTeamId = await promptForTeamId(
       itcTeams,
       {
@@ -255,12 +270,11 @@ const getInput = async (
         multiMessage: 'Please select the app connect team you want to use'
       },
       prompt
-    )  
+    )
   }
 
   //  print.info(`dev team id: ${developerTeamId}`)
   //  print.info(`app team id: ${iTunesTeamId}`)
-
 
   const askCertRepo = {
     type: 'input',
@@ -271,7 +285,7 @@ const getInput = async (
   }
 
   const appId = await ios.getAppId()
-  const isValidAppId = await prompt.confirm( 
+  const isValidAppId = await prompt.confirm(
     `We resolved Bundle ID for your project: ${appId}, is this correct?`
   )
 
@@ -308,29 +322,14 @@ const getInput = async (
   }
 }
 
-const promptForTeamId = async (teams, { message, multiMessage }, prompt) => {
-  if (teams.length > 1) {
-    const { teamId } = await prompt.ask({
-      type: 'select',
-      name: 'teamId',
-      choices: teams.map(team => {
-        return {
-          name: team.id,
-          message: `${team.name} (${team.id})`,
-        }
-      }),
-      message: multiMessage
-    })
-    return teamId
-  } else if (teams.length === 1) {
-    return teams[0]
-  } else {
-    const { teamId } = await prompt.ask({
-      type: 'input',
-      initial: options.iTunesTeamId,
-      name: 'teamId',
-      message: message
-    })
-    return teamId
-  }
+module.exports.runIOS = async (toolbox, config) => {
+  const input = await getInput(toolbox, config)
+  await initFastlane(toolbox, {
+    ...config,
+    ...input
+  })
+  await initXcode(toolbox, {
+    ...config,
+    ...input
+  })
 }
