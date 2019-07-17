@@ -1,16 +1,13 @@
 const { filesystem} = require('gluegun')
 const R = require('ramda')
 const { getConfigSection,
-	getValueFromProperty,
 	getValueAfterEqual,
 	getVariableValueInDelimiter,
 	getFirstAZWordFromSection,
 	geFirstWordsFromSection,
-	findAndroidPath,
 	findKeystoreFiles,
 	findPropertiesFiles,
 	findPropertiesPath,
-	findRoot,
 	readGradleFile,
 	retrieveHardcodedProperties,
 	retrieveValuesFromPropertiesVariables,
@@ -36,10 +33,6 @@ describe('Config Section', () => {
 		expect(output).not.toBe()
 	})  
 	
-	test('find path for gradwle command', async () => {
-		const output = findAndroidPath().getOrElse('')
-		expect(output).toBe('example_project/android/')
-	})   
 
 	test('build.gradle getConfigSection contains signingConfigs', async () => {
 		const output = getConfigSection(gradle, ['signingConfigs'])
@@ -74,12 +67,6 @@ describe('Config Section', () => {
 		expect(storePassword).toBe('INTERNALCIPROJECT_RELEASE_STORE_PASSWORD')
 	})
 
-	test('getValueFromProperty in release section', async () => {
-		const output = getConfigSection(gradle, ['signingConfigs','release'])
-		const valueVariable = getValueFromProperty(output,'keyPassword')
-		expect(valueVariable).not.toBe(undefined)
-	})
-
 	test('getValueAfterEqual find variable in file and get value', async () => {
 		const storePassword = getValueAfterEqual(properties,'INTERNALCIPROJECT_RELEASE_STORE_PASSWORD').getOrElse('')
 		// const storePassword = get(getValueAfterEqual).getOrElse();
@@ -108,26 +95,27 @@ describe('Config Section', () => {
 		expect(variables[2]).toBe('app/internalCiProject-keystore.properties')
 	})
 
-	test('keystoreProperties with single quotes', async () =>{
-		line = 'keystoreProperties.load(new FileInputStream(keystorePropertiesFile))'
-		const variables = findRoot(line)
-		expect(variables).toBe('keystorePropertiesFile')
-	})
+	//In case it is needed to be tested
+	// test('keystoreProperties with single quotes', async () =>{
+	// 	line = 'keystoreProperties.load(new FileInputStream(keystorePropertiesFile))'
+	// 	const variables = findRoot(line)
+	// 	expect(variables).toBe('keystorePropertiesFile')
+	// })
 
-	test('find value in keystoreProperties with quotes', async() => {
-		line = 'keystorePropertiesFile = rootProject.file("app/internalCiProject-keystore.properties")'
-		const variables = findRoot(line)
-		expect(variables).toBe('app/internalCiProject-keystore.properties')
-	})
+	// test('find value in keystoreProperties with quotes', async() => {
+	// 	line = 'keystorePropertiesFile = rootProject.file("app/internalCiProject-keystore.properties")'
+	// 	const variables = findRoot(line)
+	// 	expect(variables).toBe('app/internalCiProject-keystore.properties')
+	// })
 
-	test('findRoot', async () =>{
-		const line1 = "localProps.load(new FileInputStream(file('../local.properties')))"
-		const variables = findRoot(line1)
-		expect(variables).toBe('../local.properties')
-		const line2 = 'localProps.load(new FileInputStream(file(\"../local.properties\")))'
-		const quotes = findRoot(line2)
-		expect(quotes).toBe('../local.properties')
-	})
+	// test('findRoot', async () =>{
+	// 	const line1 = "localProps.load(new FileInputStream(file('../local.properties')))"
+	// 	const variables = findRoot(line1)
+	// 	expect(variables).toBe('../local.properties')
+	// 	const line2 = 'localProps.load(new FileInputStream(file(\"../local.properties\")))'
+	// 	const quotes = findRoot(line2)
+	// 	expect(quotes).toBe('../local.properties')
+	// })
 
 	test('release section contains hardcoded values', async () =>{
 		const releaseSection = "release {\n" +
@@ -209,4 +197,3 @@ describe('Config Section', () => {
 		}
 	)
 })
-

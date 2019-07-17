@@ -78,19 +78,15 @@ const getValueFromProperty = (text, variable) => {
   const regex = new RegExp(variable +'.* ')
   const testRegex = R.test(regex)
   const splitSpace  = R.split(' ')
-  const splitSpaces = val => val.input ? Result.Ok(splitSpace(val.input)) :  Result.Error("empty", '')
-  const either = line => line ? Result.Ok(line)  : Result.Error("no line to match")
+  const lastElement = x => R.compose(R.last, splitSpace)(x)
   const matchRegex = R.curry((regex,line) =>{
     return line ?
-    Result.Ok(R.match(regex,line)) 
-    :  Result.Error("no line to match", property)
+    Result.Ok(R.match(regex,line).input)
+    :  Result.Error("no line to match")
   })
-  const findLineRegex = R.find(testRegex) 
-  const findMatch = R.compose(findLineRegex,splitNewLine)
-  const result = either(findMatch(text)).chain(matchRegex(regex)).chain(splitSpaces)
-  const values = result.getOrElse('')
-  return R.last(values)
-  
+  const findMatch = R.compose(matchRegex(regex), R.find(testRegex), splitNewLine)(text)
+  const element = findMatch.chain(lastElement)
+  return element
 }
 
 const getValueAfterEqual = (text, variable) => {
@@ -125,11 +121,11 @@ const getVariableValueInDelimiter = (text, variable, preDelimiter, posDelimiter)
   return found
 }
 
-const retrieveValuesFromPropertiesVariables = async(path) => {
+const retrieveValuesFromPropertiesVariables = async() => {
   const gradlewCmd = './gradlew properties' 
   const command = path => path ? 
   Result.Ok( `cd ${path} && ${gradlewCmd}`) :  Result.Error('no command')
-  const comm = findAndroidPath().chain(cmd => command(cmd)).getOrElse('error on command')
+  const comm = findAndroidPath().chain(cmd => command(cmd)).getOrElse(undefined)
   if (!comm) return undefined
  
   const gradlewProperties =  await strings.trim(await system.run(comm))
@@ -287,14 +283,11 @@ const geFirstWordsFromSection = releaseSection => {
 
 module.exports = {
   createKeystore,
-  findAndroidPath,
   findKeystoreFiles,
   findPropertiesFiles,
   findPropertiesPath,
-  findRoot,
   getConfigSection,
   geFirstWordsFromSection,
-  getValueFromProperty,
   getValueAfterEqual,
   getFirstAZWordFromSection,
   getVariableValueInDelimiter,

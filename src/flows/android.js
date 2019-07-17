@@ -288,7 +288,6 @@ const setupKeystoreFile = async (android, print, circle, filesystem, prompt, opt
     .on(x => x.length === 0, () => askInputKeystoreFilePath())
     .on(x => x.length === 1, (x) => confirmKeyStoreFilePath(x.pop()))
     .otherwise(x => initChoicesKeystoreFlow(x))
-    console.log('file', file)
     if (file && filesystem.read(file)){
       storeFile = file
     }else{

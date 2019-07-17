@@ -61,9 +61,9 @@ module.exports = toolbox => {
       } = toolbox
       const { name, storePassword, alias, aliasPassword, keystoreFile, keyStoreProperties} = options
       let properties = keyStoreProperties
-      const storeFile = keystoreFile != '' ? keystoreFile : `android/app/${name}-key.keystore`
+      const storeFilePath = keystoreFile != '' ? keystoreFile : `android/app/${name}-key.keystore`
       print.info('Checking if CircleCI keystore already exists')
-      const checkKeyStore = `$(whereis keytool | awk '{print $NF}') -v -list -keystore ${storeFile} -storepass ${storePassword} -alias ${alias}`
+      const checkKeyStore = `$(whereis keytool | awk '{print $NF}') -v -list -keystore ${storeFilePath} -storepass ${storePassword} -alias ${alias}`
       let keystore
       try {
         keystore = await system.run(checkKeyStore)
@@ -80,7 +80,11 @@ module.exports = toolbox => {
         properties = await template.generate({
           template: 'keystore.properties',
           target: `android/app/${name}-keystore.properties`,
-          props: { ...options, keystore, name: name.toUpperCase() }
+          props: { 
+            ...options, 
+            keystoreFile: keystoreFile || name,
+            name: name.toUpperCase()
+          }
         })
       }else{
         print.info(`Existing keystore.properties found.`)
