@@ -16,5 +16,6 @@
         "ecmaVersion": 2018
     },
     "rules": {
+        "no-unused-vars": ["error", {"args": "after-used"}]
     }
 }

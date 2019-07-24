@@ -4,12 +4,12 @@ const R = require('ramda')
 const { getConfigSection,
   getValueAfterEqual,
   getVariableValueInDelimiter,
-  getFirstAZWordFromSection,
-  geFirstWordsFromSection,
+  getFirstAZWords,
   findKeystoreFiles,
   findPropertiesFiles,
   findPropertiesPath,
   readGradleFile,
+  retrieveValuesFromPropertyLocations,
   retrieveHardcodedProperties,
   retrieveValuesFromPropertiesVariables
 } = require('../androidHelper')
@@ -55,7 +55,7 @@ describe('Tests Config Section', () => {
 
   test('find variables in release section', async () => {
     const output = getConfigSection(gradle, ['signingConfigs', 'release'])
-    const result = getFirstAZWordFromSection(output)
+    const result = getFirstAZWords(output)
     const arrayExpected = ['keyAlias', 'keyPassword', 'storeFile', 'storePassword']
     expect(result).toHaveLength(4)
     expect(result).toEqual(arrayExpected)
@@ -83,7 +83,6 @@ describe('Tests Config Section', () => {
   test('find keystore file', async () => {
     const output = findKeystoreFiles('./example_project')
     expect(output).toHaveLength(2)
-    console.log(output)
   })
 
   test('find properties file', async () => {
@@ -95,32 +94,32 @@ describe('Tests Config Section', () => {
   })
 
   test('findPropertiesPath', async () => {
-    const variables = findPropertiesPath(gradle)
-    expect(variables).toHaveLength(3)
-    expect(variables[0]).toBe('../local.properties')
-    expect(variables[1]).toBe('localProps[keystore.props.file]')
-    expect(variables[2]).toBe('app/internalCiProject-keystore.properties')
+    const properties = findPropertiesPath(gradle)
+    expect(properties).toHaveLength(3)
+    expect(properties[0]).toBe('../local.properties')
+    expect(properties[1]).toBe('localProps[keystore.props.file]')
+    expect(properties[2]).toBe('internalCiProject-keystore.properties')
   })
   /*
   In case it is needed to be tested
   test('keystoreProperties with single quotes', async () =>{
   	line = 'keystoreProperties.load(new FileInputStream(keystorePropertiesFile))'
-  	const variables = findRoot(line)
+  	const variables = findFileInputStreamPath(line)
   	expect(variables).toBe('keystorePropertiesFile')
   })
 
   test('find value in keystoreProperties with quotes', async() => {
   	line = 'keystorePropertiesFile = rootProject.file("app/internalCiProject-keystore.properties")'
-  	const variables = findRoot(line)
+  	const variables = findFileInputStreamPath(line)
   	expect(variables).toBe('app/internalCiProject-keystore.properties')
   })
 
-  test('findRoot', async () =>{
+  test('findFileInputStreamPath', async () =>{
   	const line1 = "localProps.load(new FileInputStream(file('../local.properties')))"
-  	const variables = findRoot(line1)
+  	const variables = findFileInputStreamPath(line1)
   	expect(variables).toBe('../local.properties')
   	const line2 = 'localProps.load(new FileInputStream(file(\"../local.properties\")))'
-  	const quotes = findRoot(line2)
+  	const quotes = findFileInputStreamPath(line2)
   	expect(quotes).toBe('../local.properties')
   }) */
 
@@ -164,35 +163,21 @@ describe('Tests Config Section', () => {
     expect(values['keystoreFile']).toBe('./internalCiProject-key.keystore')
   })
 
-  test('retrieve properties in brackets inside releaseSection', async () => {
-    const signingConfig	=
+  test('retrieveValuesFromPropertyLocations', async () => {
+    const releaseSection	=
 			'release { \n' +
 			"storeFile file(keystoreProperties['RELEASE_STORE_FILE'])\n" +
 			"keyAlias keystoreProperties['RELEASE_KEY_ALIAS']\n" +
 			"storePassword keystoreProperties['RELEASE_STORE_PASSWORD']\n" +
 			"keyPassword keystoreProperties['RELEASE_KEY_PASSWORD']\n" +
 			'}\n' +
-		'}\n '
-    const values = geFirstWordsFromSection(signingConfig)
-    const storeFileKey = values[0].key
-    const storeFileValue = values[0].value
-    expect(storeFileKey).toBe('storeFile')
-    expect(storeFileValue).toBe('RELEASE_STORE_FILE')
-
-    const keyAliasKey = values[1].key
-    const keyAliasValue = values[1].value
-    expect(keyAliasKey).toBe('keyAlias')
-    expect(keyAliasValue).toBe('RELEASE_KEY_ALIAS')
-
-    const storePasswordKey = values[2].key
-    const storePasswordValue = values[2].value
-    expect(storePasswordKey).toBe('storePassword')
-    expect(storePasswordValue).toBe('RELEASE_STORE_PASSWORD')
-
-    const keyPasswordKey = values[3].key
-    const keyPasswordValue = values[3].value
-    expect(keyPasswordKey).toBe('keyPassword')
-    expect(keyPasswordValue).toBe('RELEASE_KEY_PASSWORD')
+    '}\n '
+    const properties = ['src/android/__mocks__/internalCiProject-keystore.properties']
+    const values = retrieveValuesFromPropertyLocations(releaseSection, properties).getOrElse(undefined)
+    expect(values['keystoreAlias']).toBe('alias')
+    expect(values['keystoreAliasPassword']).toBe('123456')
+    expect(values['keystorePassword']).toBe('123456')
+    expect(values['keystoreFile']).toBe('./internalCiProject-key.keystore')
   }
   )
 

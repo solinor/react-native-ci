@@ -13,7 +13,7 @@ const regexBuilder = (property, operator, prefix, postfix, patternArray) => {
   if (patternArray === '') {
     builded = property + operator
   } else {
-    builded = patternArray.reduce((total, pattern, index, array) => {
+    builded = patternArray.reduce((total, pattern, index) => {
       if (index === 0) {
         total = property + pattern
       } else {
@@ -61,7 +61,7 @@ const getConfigSection = (text, section) => {
   }
 }
 
-const getFirstAZWordFromSection = section => {
+const getFirstAZWords = section => {
   const builder = new RegExp(regexBuilder('', '|', '(', ')', ['{', '}']))
   const noBrackets = R.complement(R.test(builder))
   const noBracketsFilter = R.filter(noBrackets)
@@ -139,6 +139,35 @@ const retrieveValuesFromPropertiesVariables = async () => {
   return values
 }
 
+const retrieveValuesFromPropertyLocations = (releaseSection, propertiesLocation) => {
+  const filterFiles = R.compose(R.filter(filesystem.exists), R.map(replaceDotSlash('./android/')), R.filter(Boolean))
+  const filteredFiles = locations => locations ? Result.Ok(filterFiles(locations)) : Result.Error('Not locations found')
+  const files = filteredFiles(propertiesLocation)
+  const findSection = files => files && files.length > 0 ? Result.Ok(getSection(releaseSection, filesystem.read(files[0]))) : Result.Error('Not files found')
+  const sectionFound = files.chain(findSection)
+  return sectionFound
+}
+
+const getSection = (releaseSection, str) => {
+  const firstWords = geFirstWordsFromSection(releaseSection)
+  const dictionary = {}
+  firstWords.forEach((dictValue) => {
+    const value = getValueAfterEqual(str, dictValue.value).getOrElse('')
+    dictionary[dictValue.key] = value
+  })
+  const keystoreFile = dictionary['storeFile']
+  const keystorePassword = dictionary['storePassword']
+  const keystoreAlias = dictionary['keyAlias']
+  const keystoreAliasPassword = dictionary['keyPassword']
+  const values = {
+    keystoreAliasPassword,
+    keystoreAlias,
+    keystorePassword,
+    keystoreFile: keystoreFile
+  }
+  return values
+}
+
 const parseSectionLines = (lines, section) => {
   let isInSection = false
   let brackets = 0
@@ -190,7 +219,7 @@ const findPathByRegex = (lines, regex) => {
   lines.forEach((line) => {
     const found = line.match(regex)
     if (found) {
-      const variableName = findRoot(found.input)
+      const variableName = findFileInputStreamPath(found.input)
       if (variableName) {
         parent.push(variableName)
       }
@@ -217,7 +246,7 @@ const findVariableName = (line) => {
   return newProperty && newProperty.length > 0 ? newProperty[0] : undefined
 }
 
-const findRoot = (line) => {
+const findFileInputStreamPath = (line) => {
   const regex = new RegExp('(new FileInputStream\\((.*?)\\)\\)|file\\((.*?)\\)\\)|file\\((.*?)\\))')
   const newProperty = line.match(regex)
   const includeFile = R.includes('file')
@@ -267,7 +296,7 @@ const retrieveHardcodedProperties = releaseSection => {
 }
 
 const geFirstWordsFromSection = releaseSection => {
-  const firstWords = getFirstAZWordFromSection(releaseSection)
+  const firstWords = getFirstAZWords(releaseSection)
   const dictGradle = firstWords.map(word => {
     const value = getVariableValueInDelimiter(releaseSection, word, '[', ']').getOrElse('')
     return { key: word, value: value }
@@ -281,12 +310,12 @@ module.exports = {
   findPropertiesFiles,
   findPropertiesPath,
   getConfigSection,
-  geFirstWordsFromSection,
+  getFirstAZWords,
   getValueAfterEqual,
-  getFirstAZWordFromSection,
   getVariableValueInDelimiter,
   readGradleFile,
   replaceDotSlash,
+  retrieveValuesFromPropertyLocations,
   retrieveHardcodedProperties,
   retrieveValuesFromPropertiesVariables
 }

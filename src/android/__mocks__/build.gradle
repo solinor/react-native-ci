@@ -93,7 +93,7 @@ def enableSeparateBuildPerCPUArchitecture = false
  */
 def enableProguardInReleaseBuilds = false
 
-def keystorePropertyFile = rootProject.file("app/internalCiProject-keystore.properties")
+def keystorePropertyFile = rootProject.file("internalCiProject-keystore.properties")
 def keystoreProperties = new Properties()
 keystoreProperties.load(new FileInputStream(keystorePropertyFile))
 
