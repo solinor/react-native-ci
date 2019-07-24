@@ -1,7 +1,7 @@
 const { run } = require('../src/cli')
 const { runAndroid } = require('../src/flows/android')
 beforeAll(() => {
-  jest.setTimeout(90000) // Gradle
+  jest.setTimeout(90000) // Time enough to run gradle
   process.env.INTEGRATION_TEST = true
 })
 afterAll(() => {

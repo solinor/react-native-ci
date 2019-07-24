@@ -14,20 +14,21 @@ const { getConfigSection,
   retrieveValuesFromPropertiesVariables
 } = require('../androidHelper')
 
-const noRelease = filesystem.read('src/android/__mocks__/no-release-build.gradle')
+const noReleaseSectionGradle = filesystem.read('src/android/__mocks__/no-release-build.gradle')
 const gradle = filesystem.read('src/android/__mocks__/build.gradle')
 let properties
+
 beforeAll(() => {
-  jest.setTimeout(60000) // Mandatory for API Request
+  jest.setTimeout(90000) // Mandatory for API Request
   process.env.INTEGRATION_TEST = true
 })
 beforeEach(() => {
   properties = filesystem.read('./example_project/android/app/internalCiProject-keystore.properties')
 })
 
-describe('Config Section', () => {
-  test('no-release-build.gradle getConfigSection does not contains release sub section inside signingConfigs', async () => {
-    const output = getConfigSection(noRelease, ['signingConfigs', 'release'])
+describe('Tests Config Section', () => {
+  test('no-release-build.gradle getConfigSection does not contain release sub section inside signingConfigs', async () => {
+    const output = getConfigSection(noReleaseSectionGradle, ['signingConfigs', 'release'])
     expect(output).toBe('')
   })
 
@@ -36,25 +37,28 @@ describe('Config Section', () => {
     expect(output).not.toBe()
   })
 
-  test('build.gradle getConfigSection contains signingConfigs', async () => {
+  test('build.gradle getConfigSection(array) retrieve signingConfigs', async () => {
     const output = getConfigSection(gradle, ['signingConfigs'])
-    expect(output).not.toBe('')
+    expect(output).toEqual(expect.stringContaining('signingConfigs'))
   })
 
-  test('getConfigSection convert  section string to array', async () => {
+  test('build.gradle getConfigSection(string) retrieve signingConfig ', async () => {
     const output = getConfigSection(gradle, 'signingConfigs')
-    expect(output).not.toBe('')
+    expect(output).toEqual(expect.stringContaining('signingConfigs'))
   })
 
-  test('build.gradlde getConfigSection contains release sub section inside signingConfigs', async () => {
+  test('build.gradlde getConfigSection(array) retrieve release section inside signingConfigs', async () => {
     const output = getConfigSection(gradle, ['signingConfigs', 'release'])
-    expect(output).not.toBe('')
+    expect(output).toEqual(expect.stringContaining('release'))
+    expect(output).toEqual(expect.not.stringContaining('signingConfigs'))
   })
 
   test('find variables in release section', async () => {
     const output = getConfigSection(gradle, ['signingConfigs', 'release'])
     const result = getFirstAZWordFromSection(output)
+    const arrayExpected = ['keyAlias', 'keyPassword', 'storeFile', 'storePassword']
     expect(result).toHaveLength(4)
+    expect(result).toEqual(arrayExpected)
   })
 
   test('get value from brackets in release section', async () => {
@@ -69,9 +73,8 @@ describe('Config Section', () => {
     expect(storePassword).toBe('INTERNALCIPROJECT_RELEASE_STORE_PASSWORD')
   })
 
-  test('getValueAfterEqual find variable in file and get value', async () => {
+  test('get value from variable in property file', async () => {
     const storePassword = getValueAfterEqual(properties, 'INTERNALCIPROJECT_RELEASE_STORE_PASSWORD').getOrElse('')
-    // const storePassword = get(getValueAfterEqual).getOrElse();
     expect(storePassword).toBe('123456')
     const keyAlias = getValueAfterEqual(properties, 'INTERNALCIPROJECT_RELEASE_KEY_ALIAS').getOrElse('')
     expect(keyAlias).toBe('app')
@@ -80,13 +83,15 @@ describe('Config Section', () => {
   test('find keystore file', async () => {
     const output = findKeystoreFiles('./example_project')
     expect(output).toHaveLength(2)
+    console.log(output)
   })
 
   test('find properties file', async () => {
     const output = findPropertiesFiles('./example_project')
     // Output can contains local.properties but these will fail in CI because it is added to .gitignore
-    const filtered = output.filter(R.complement(R.contains('local.properties')))
-    expect(filtered).toHaveLength(2)
+    const files = output.filter(R.complement(R.contains('local.properties')))
+    const expected = ['example_project/android/app/internalCiProject-keystore.properties', 'example_project/android/gradle.properties']
+    expect(files).toEqual(expected)
   })
 
   test('findPropertiesPath', async () => {
@@ -119,7 +124,7 @@ describe('Config Section', () => {
   	expect(quotes).toBe('../local.properties')
   }) */
 
-  test('release section contains hardcoded values', async () => {
+  test('retrieve specific values from build.gradle file', async () => {
     const releaseSection = 'release {\n' +
 			" storeFile file('your/key/store/path')\n" +
 			" keyAlias 'keystorealias'\n" +
@@ -143,7 +148,7 @@ describe('Config Section', () => {
     expect(storeFileValue).toBe('your/key/store/path')
   })
 
-  test('retrieve hardcoded properties from gradle', async () => {
+  test('retrieve properties from gradle', async () => {
     const signingConfig	=
 			'release { \n' +
 				"	storeFile file('./internalCiProject-key.keystore') \n" +
@@ -191,7 +196,7 @@ describe('Config Section', () => {
   }
   )
 
-  test('retrieve values from properties values gradlew command', async () => {
+  test('retrieve properties values gradlew command', async () => {
     const values = await retrieveValuesFromPropertiesVariables()
     expect(values['keystoreAliasPassword']).toBe('123456')
     expect(values['keystorePassword']).toBe('123456')

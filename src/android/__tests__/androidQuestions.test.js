@@ -34,7 +34,7 @@ describe('Ask Keystore questions', () => {
     done()
   })
 
-  test('Create a new keystore ', async done => {
+  test('Create a new keystore', async done => {
     const sendKeystrokes = async () => {
       io.send()
       io.send(keys.enter)
@@ -45,7 +45,7 @@ describe('Ask Keystore questions', () => {
     done()
   })
 
-  test('Validate a keystore file path after typing an nonexistent one ', async done => {
+  test('Validate a keystore file path after typing a nonexistent one', async done => {
     const sendKeystrokes = async () => {
       io.send('example_project/android/internalProject-key.keystore1')
       io.send(keys.enter)
@@ -71,7 +71,7 @@ describe('Ask Keystore questions', () => {
     done()
   })
 
-  test('Cancel confirming keystore path and provide a different one ', async done => {
+  test('Cancel confirming keystore path and provide a different one', async done => {
     const sendKeystrokes = async () => {
       io.send('no')
       io.send(keys.enter)
@@ -113,7 +113,7 @@ describe('Ask Keystore questions', () => {
     done()
   })
 
-  test('Select `create one` from keystore list ', async done => {
+  test('Select `create one` from keystore list', async done => {
     const choices = ['example_project/android/example-key.keystore1', 'example_project/android/internalProject-key.keystore2']
     const sendKeystrokes = async () => {
       io.send(keys.down)
@@ -151,7 +151,7 @@ describe('Ask Property file questions', () => {
     done()
   })
 
-  test('Validate a property file path after typing an nonexistent one  ', async done => {
+  test('Validate a property file path after typing an onexistent one', async done => {
     const sendKeystrokes = async () => {
       io.send('example_project/android/gradle.properties1')
       io.send(keys.enter)
@@ -166,7 +166,7 @@ describe('Ask Property file questions', () => {
     done()
   })
 
-  test('Confirm property file path ', async done => {
+  test('Confirm property file path', async done => {
     const sendKeystrokes = async () => {
       io.send(keys.enter)
     }
@@ -176,7 +176,7 @@ describe('Ask Property file questions', () => {
     done()
   })
 
-  test('Cancel confirming property file path and provide a different one  ', async done => {
+  test('Cancel confirming property file path and provide a different one', async done => {
     const sendKeystrokes = async () => {
       io.send('n')
       io.send(keys.enter)
@@ -190,7 +190,7 @@ describe('Ask Property file questions', () => {
     done()
   })
 
-  test('Select second item from property list ', async done => {
+  test('Select second item from property list', async done => {
     const choices = ['example_project/android/gradle.properties', 'example_project/android/gradle.properties']
     const sendKeystrokes = async () => {
       io.send(keys.down)
