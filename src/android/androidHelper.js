@@ -65,8 +65,8 @@ const getFirstAZWords = section => {
   const builder = new RegExp(regexBuilder('', '|', '(', ')', ['{', '}']))
   const noBrackets = R.complement(R.test(builder))
   const noBracketsFilter = R.filter(noBrackets)
-  const fistWords = R.map(firstWord)
-  const findWords = R.compose(fistWords, noBracketsFilter, splitNewLine)
+  const firstWords = R.map(firstWord)
+  const findWords = R.compose(firstWords, noBracketsFilter, splitNewLine)
   const words = findWords(section)
   return words
 }
