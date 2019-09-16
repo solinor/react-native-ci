@@ -149,7 +149,7 @@ const retrieveValuesFromPropertyLocations = (releaseSection, propertiesLocation)
 }
 
 const getSection = (releaseSection, str) => {
-  const firstWords = geFirstWordsFromSection(releaseSection)
+  const firstWords = getFirstWordsFromSection(releaseSection)
   const dictionary = {}
   firstWords.forEach((dictValue) => {
     const value = getValueAfterEqual(str, dictValue.value).getOrElse('')
@@ -295,7 +295,7 @@ const retrieveHardcodedProperties = releaseSection => {
   return values
 }
 
-const geFirstWordsFromSection = releaseSection => {
+const getFirstWordsFromSection = releaseSection => {
   const firstWords = getFirstAZWords(releaseSection)
   const dictGradle = firstWords.map(word => {
     const value = getVariableValueInDelimiter(releaseSection, word, '[', ']').getOrElse('')
