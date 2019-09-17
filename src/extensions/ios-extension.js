@@ -116,13 +116,18 @@ module.exports = toolbox => {
       const { meta } = toolbox
       const promise = new Promise((resolve, reject) => {
         try {
-          const devTeams = parseTeam('dev', accountInfo, meta.src)
-          const itcTeams = parseTeam('itc', accountInfo, meta.src)
-          const teams = {
-            itcTeams,
-            devTeams
-          }
-          resolve(teams)
+          (async () => {
+            const devTeams = await parseTeam('dev', accountInfo, meta.src)
+            const itcTeams = await parseTeam('itc', accountInfo, meta.src)
+            const teams = {
+              itcTeams,
+              devTeams
+            }
+            resolve(teams)
+          })().catch(e => {
+            console.log('Error: ' + e)
+            reject(e)
+          })
         } catch (e) {
           reject(e)
         }
