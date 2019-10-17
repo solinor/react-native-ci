@@ -70,7 +70,6 @@ platform :android do
     if env != 'dev' and env != 'staging' and env != 'release' then
       raise 'env must be one of dev|staging|release'
     end
-    env_name = env.capitalize
     package_name_postfix = {
       'release' => '',
       'dev' => '.dev',
