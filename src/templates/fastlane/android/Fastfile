@@ -41,7 +41,7 @@ platform :android do
 
     build_number = number_of_commits()
     gradle(
-      task: 'assemble',
+      task: 'bundle',
       build_type: build_type,
       properties: {
         "VERSION_CODE" => build_number
@@ -79,7 +79,7 @@ platform :android do
     upload_to_play_store(
       package_name:  "<%= props.appId %>#{package_name_postfix}",
       track: 'internal',
-      apk: "./app/build/outputs/apk/#{env}/release/app-#{env}-release.apk"
+      aab: "./app/build/outputs/bundle/#{env}/app.aab"
     )
   end
 end
