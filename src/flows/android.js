@@ -62,12 +62,19 @@ const initAndroid = async ({ android, http, prompt, print, circle }, options) =>
   }
 }
 
-const initFastlane = async ({ system, android, template, filesystem, print }) => {
+const initFastlane = async ({ system, android, template, filesystem, print, prompt }) => {
   const fastlanePath = system.which('fastlane')
   if (!fastlanePath) {
     print.info('No fastlane found, install...')
     await system.run('sudo gem install fastlane -NV')
   }
+
+  const { buildMode } = await prompt.ask({
+    type: 'select',
+    name: 'buildMode',
+    message: 'Use Android App Bundle (.aab) or Android Package Kit (.apk) builds for Play Store?',
+    choices: ['.aab', '.apk'],
+  })
 
   const appId = android.getApplicationId()
 
@@ -80,7 +87,7 @@ const initFastlane = async ({ system, android, template, filesystem, print }) =>
   await template.generate({
     template: 'fastlane/android/Fastfile',
     target: 'android/fastlane/Fastfile',
-    props: { appId }
+    props: { appId, useAabBuilds: buildMode === '.aab' }
   })
 
   await template.generate({
