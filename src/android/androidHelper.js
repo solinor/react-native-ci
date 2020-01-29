@@ -40,7 +40,7 @@ const findAndroidPath = () => {
 const linesToSearch = R.curry((lines, x) => lines.find(x))
 const splitNewLine = text => text.trim().split('\n')
 const replaceQuotes = R.replace(/'|"/g)
-const replaceQuotesBlank = replaceQuotes('')
+const replaceQuotesWith = replaceQuotes('')
 const closureOrBuilder = (pattern) => regexBuilder('', '|', '(', ')', pattern)
 const childBuilder = (properties) => properties.map(property => regexBuilder(property, '|', '', '', ['.*load', '.*file']))
 const firstWord = string => string.trim().split(' ')[0]
@@ -106,7 +106,7 @@ const getVariableValueInDelimiter = (text, variable, preDelimiter, posDelimiter)
   }
   const getProperty = property => {
     return property && property.length > 1
-      ? Result.Ok(replaceQuotesBlank(property[1]))
+      ? Result.Ok(replaceQuotesWith(property[1]))
       : Result.Error('no property matched', property)
   }
   const regexBuilt = new RegExp(regex)
@@ -258,7 +258,7 @@ const findFileInputStreamPath = (line) => {
     const regexFile = new RegExp('file\\((.*?)\\)')
     const filePath = line.match(regexFile)
     const value = filePath[1]
-    const replaced = replaceQuotesBlank(value)
+    const replaced = replaceQuotesWith(value)
     return replaced
   } else {
     const filterUndefined = newProperty.filter(Boolean)
