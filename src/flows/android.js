@@ -121,7 +121,7 @@ const retrieveValuesFromPropertyFile = (releaseSection, gradle) => {
   return result
 }
 
-const initFastlane = async ({ system, android, template, print }) => {
+const initFastlane = async ({ system, android, template, print }, options) => {
   const fastlanePath = system.which('fastlane')
   if (!fastlanePath) {
     print.info('No fastlane found, install...')
@@ -136,10 +136,20 @@ const initFastlane = async ({ system, android, template, print }) => {
     props: {}
   })
 
+  const askBuildMode = {
+    initial: options.buildMode,
+    skip: () => options.buildMode,
+    type: 'select',
+    name: 'buildMode',
+    message: 'Use Android App Bundle (.aab) or Android Package Kit (.apk) builds for Play Store?',
+    choices: ['.aab', '.apk']
+  }
+  const buildMode = await askBuildMode
+
   await template.generate({
     template: 'fastlane/android/Fastfile',
     target: 'android/fastlane/Fastfile',
-    props: { appId }
+    props: { appId, useAabBuilds: buildMode === '.aab' }
   })
 
   await template.generate({
@@ -324,7 +334,7 @@ const setupKeystoreFile = async (android, print, circle, filesystem, prompt, opt
 
 module.exports.runAndroid = async (toolbox, config) => {
   await initAndroid(toolbox, config)
-  await initFastlane(toolbox)
+  await initFastlane(toolbox, config)
   await setupGradle(toolbox, config)
   return true
 }

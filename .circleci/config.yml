@@ -1,121 +1,177 @@
-# Javascript Node CircleCI 2.0 configuration file
-#
-# Check https://circleci.com/docs/2.0/language-javascript/ for more details
-#
-
-defaults: &defaults
-  docker:
-    # Choose the version of Node you want here
-    - image: circleci/android:api-28-node 
-  working_directory: ~/repo
-
 version: 2
 jobs:
-  setup:
-    <<: *defaults
-    steps:
-     # Debug with ssh 
-      - add_ssh_keys:
-          fingerprints:
-            - "SO:ME:FIN:G:ER:PR:IN:T"
-      - checkout
-      - restore_cache:
-          name: Restore node modules
-          keys:
-            - v1-dependencies-{{ checksum "package.json" }}
-            # fallback to using the latest cache if no exact match is found
-            - v1-dependencies-
-      - restore_cache:
-          name: Restore example_project node modules
-          keys:
-            -  v1-example-{{ checksum "example_project/package.json" }}
-            # fallback to using the latest cache if no exact match is found
-            - v1-example-
-      - run:
-          name: Install dependencies
-          command: yarn install
-      - run:  
-          name: Intall dependencies for example project
-          command: cd example_project && yarn install
-      - run:
-          name: Change Permissions
-          command: sudo chown -R $(whoami) /usr/local
-      - save_cache:
-          name: Save node modules
-          paths:
-            - node_modules
-          key: v1-dependencies-{{ checksum "package.json" }}
-      - save_cache:
-          name: Save node modules example_project
-          paths:
-            - example_project/node_modules
-          key: v1-example-{{ checksum "example_project/package.json" }}
-
-  tests:
-    <<: *defaults
-    steps:
-      - checkout
-      - restore_cache:
-          name: Restore node modules
-          keys:
-            - v1-dependencies-{{ checksum "package.json" }}
-            # fallback to using the latest cache if no exact match is found
-            - v1-dependencies-
-      - restore_cache:
-          name: Restore example_project node modules
-          keys:
-            - v1-example-{{ checksum "example_project/package.json" }}
-            # fallback to using the latest cache if no exact match is found
-            - v1-example-
-      - run:
-          name: Change Permissions
-          command: sudo chown -R $(whoami) /usr/local
-      - run:
-          name:  Update package list
-          command: sudo apt-get update
-      - run:
-          name: Install gems for Integration tests
-          command: sudo apt install ruby-full
-      - run:
-          name: Install fastlane
-          command: sudo gem install fastlane -NV
-      - run:
-          name: Run tests
-          command: yarn ci:test # this command will be added to/found in your package.json scripts
-
-  publish:
-    <<: *defaults
+  test:
+    working_directory: ~/project
+    docker:
+    - image: circleci/node:8
     steps:
     - checkout
-    - run: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
     - restore_cache:
-        name: Restore node modules
-        keys:
-            - v1-dependencies-{{ checksum "package.json" }}
-            # fallback to using the latest cache if no exact match is found
-            - v1-dependencies-
+        key: react-native-ci-{{ checksum "package-lock.json" }}
+    - run: npm install
+    - save_cache:
+        key: react-native-ci-{{ checksum "package-lock.json" }}
+        paths:
+        - node_modules
+    - persist_to_workspace:
+        root: ~/project
+        paths:
+        - node_modules
+    - store_test_results:
+        path: ~/project/junit.xml
+
+  android:
+    working_directory: ~/project/android
+    docker:
+    - image: circleci/android:api-28-node
+    steps:
+    - checkout:
+        path: ~/project
+    - attach_workspace:
+        at: ~/project
     - restore_cache:
-        name: Restore example_project node modules
         keys:
-          - v1-example-{{ checksum "example_project/package.json" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-example-
-    # Run semantic-release after all the above is set.
+        - jars-{{ checksum "build.gradle" }}-{{ checksum  "app/build.gradle" }}
+    - restore_cache:
+        keys:
+        - 1-gems-android-{{ checksum "Gemfile.lock" }}
+    - run: bundle install --path vendor/bundle
+    - save_cache:
+        key: 1-gems-android-{{ checksum "Gemfile.lock" }}
+        paths:
+        - vendor/bundle
+    - run: bundle exec base64 -d <<< ${KEYSTORE} > app/${CIRCLE_PROJECT_REPONAME}-key.keystore
+    - run: bundle exec base64 -d <<< ${KEYSTORE_PROPERTIES} > app/${CIRCLE_PROJECT_REPONAME}-keystore.properties
+    - run: bundle exec fastlane build
+    - save_cache:
+        paths:
+        - ~/.gradle
+        key: jars-{{ checksum "build.gradle" }}-{{ checksum  "app/build.gradle" }}
+
+  build_deploy_android_dev: &build_deploy_android_template  # to future maintainer: this is YAML's anchor feature
+    working_directory: ~/project/android
+    environment:
+      ANDROID_ENVIRONMENT: dev
+    docker:
+      - image: circleci/android:api-28-node
+    steps:
+      - checkout:
+          path: ~/project
+      - attach_workspace:
+          at: ~/project
+      - restore_cache:
+          keys:
+            - jars-{{ checksum "build.gradle" }}-{{ checksum  "app/build.gradle" }}
+      - restore_cache:
+          keys:
+            - 1-gems-android-{{ checksum "Gemfile.lock" }}
+      - run: bundle install --path vendor/bundle
+      - save_cache:
+          key: 1-gems-android-{{ checksum "Gemfile.lock" }}
+          paths:
+            - vendor/bundle
+      - run: sudo apt-get update
+      - run: sudo apt-get install imagemagick
+      - run: echo ${KEYSTORE} | base64 --decode > app/${CIRCLE_PROJECT_REPONAME}-key.keystore
+      - run: echo ${KEYSTORE_PROPERTIES} | base64 --decode > app/${CIRCLE_PROJECT_REPONAME}-keystore.properties
+      - run: echo ${GOOGLE_PLAY_JSON} | base64 --decode > fastlane/google-play-store.json
+      - run: bundle exec fastlane build_deploy env:${ANDROID_ENVIRONMENT}
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: jars-{{ checksum "build.gradle" }}-{{ checksum  "app/build.gradle" }}
+
+  build_deploy_android_staging:
+    <<: *build_deploy_android_template
+    environment:
+      ANDROID_ENVIRONMENT: staging
+
+  ios:
+    macos:
+      xcode: "10.1.0"
+    working_directory: ~/project/ios
+    environment:
+      FL_OUTPUT_DIR: ~/project/output
+    shell: /bin/bash --login -o pipefail
+    steps:
+    - checkout:
+        path: ~/project
+    - restore_cache:
+        key: react-native-ci-iOS-{{ checksum "../package-lock.json" }}
+    - run: npm install
+    - save_cache:
+        key: react-native-ci-iOS-{{ checksum "../package-lock.json" }}
+        paths:
+        - ../node_modules
     - run:
-        name: Publish to NPM
-        command: yarn ci:publish
+        name: Set Ruby Version
+        command:  echo "ruby-2.4" > ~/.ruby-version
+    - run:
+        name: Configure Bundler
+        command: |
+          echo 'export BUNDLER_VERSION=$(cat Gemfile.lock | tail -1 | tr -d " ")' >> $BASH_ENV
+          source $BASH_ENV
+          gem install bundler        
+    - restore_cache:
+        key: 1-gems-ios-{{ checksum "Gemfile.lock" }}
+# TODO Detect the existence of the Podfile and enable this
+#    - run:
+#        name: Fetch CocoaPods Specs
+#        command: |
+#          curl https://cocoapods-specs.circleci.com/fetch-cocoapods-repo-from-s3.sh | bash -s cf
+    - run: bundle install --path vendor/bundle
+#    - run: bundle exec pod install
+    - run: bundle update fastlane
+    - save_cache:
+        key: 1-gems-ios-{{ checksum "Gemfile.lock" }}
+        paths:
+        - vendor/bundle
+
+    - run: bundle exec fastlane build
+    - store_artifacts:
+        path: ~/project/output
 
 workflows:
   version: 2
-  test_and_release:
+  node-android-ios:
     jobs:
-      - setup
-      - tests:
-          requires:
-            - setup
-      - publish:
-          requires:
-            - tests
-          filters:
-            branches:
-              only: master
+    - test
+
+    - android:
+        requires:
+        - test
+        filters:
+          branches:
+            ignore:
+              - master
+              - staging
+
+    - ios:
+        requires:
+        - test
+
+    - build_deploy_android_dev:
+        filters:
+          branches:
+            only: master
+
+    - build_deploy_android_staging:
+        filters:
+          branches:
+            only: staging
+
+    - build_deploy_ios_dev:
+        requires:
+          - test
+        filters:
+          branches:
+            only: master
+
+    - build_deploy_ios_staging:
+        requires:
+          - test
+        filters:
+          branches:
+            only: staging
+
+

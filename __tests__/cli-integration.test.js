@@ -19,7 +19,8 @@ describe('Options', () => {
       githubOrg: 'company',
       repo: 'internalCiProject',
       circleApi: '123456',
-      googleJsonPath: './'
+      googleJsonPath: './',
+      buildMode: '.aab'
     }
     const toolbox = await run()
     // const output = await toolbox.system.exec(`react-native-ci init --android --githubOrg company --repo xxxxx --circleApi 123456 --googleJsonPath ./ `)

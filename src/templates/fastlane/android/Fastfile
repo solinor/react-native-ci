@@ -41,8 +41,9 @@ platform :android do
 
     build_number = number_of_commits()
     gradle(
-      task: 'assemble',
-      build_type: build_type,
+     <%if (props.useAabBuilds) { -%> task: 'bundle',
+     <% } else { -%> task: 'assemble',
+     <% } -%> build_type: build_type,
       properties: {
         "VERSION_CODE" => build_number
       }
@@ -70,7 +71,6 @@ platform :android do
     if env != 'dev' and env != 'staging' and env != 'release' then
       raise 'env must be one of dev|staging|release'
     end
-    env_name = env.capitalize
     package_name_postfix = {
       'release' => '',
       'dev' => '.dev',
@@ -79,7 +79,9 @@ platform :android do
     upload_to_play_store(
       package_name:  "<%= props.appId %>#{package_name_postfix}",
       track: 'internal',
-      apk: "./app/build/outputs/apk/#{env}/release/app-#{env}-release.apk"
+     <% if (props.useAabBuilds) { -%> aab: "./app/build/outputs/bundle/#{env}/app.aab"-%>
+     <% } else { -%> apk: "./app/build/outputs/apk/#{env}/release/app-#{env}-release.apk"-%>
+     <% } %>
     )
   end
 end
